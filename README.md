@@ -1,0 +1,44 @@
+## AI model Study
+### Study #1 - Stable Diffusion local model
+
+- **환경:** 부적합해서 탈락
+- **결과:**  
+  - 로컬 모델 실행 시 GPU가 필수(없음)
+- **결론:**  
+  - 로컬 모델 실험은 시간도 오래 걸리고, 현재 내 개발 환경에서는 불가능
+
+
+### Study #1 - Replicate
+
+- **모델:** Replicate 8bit Diffusion
+- **결과:**  
+  - 응답 속도 너무 느림
+  - GPU token 비용 부담 큼
+- **결론:**  
+  - MVP에서 비효울적이라고 판단
+
+---
+
+### Study #2 - PixelLab API
+
+- **모델:** Pixel Art 기본 모델
+- **결과:**  
+  - 월간 무료 호출 없음, Starter 플랜 $12~19 필요  
+  - 사용법은 간단하지만 비용 부담스러움
+- **결론:**  
+  - 보류
+
+---
+
+### Study #3 - OpenAI DALL·E
+
+- **프롬프트 예시:**  
+  "64x64 pixel art of a duck character, NES 8bit style, minimal details"
+- **결과:**  
+  - 응답 속도 20초 내외
+  - 출력 해상도는 256x256 이상 → Canvas에서 downscale + pixelate 처리 가능
+- **결론:**  
+  - 결국은 openai구나
+
+### API docs
+https://platform.openai.com/docs/api-reference/evals
