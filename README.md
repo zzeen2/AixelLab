@@ -42,3 +42,6 @@
 
 ### API docs
 https://platform.openai.com/docs/api-reference/evals
+
+## Canvas
+https://velog.io/@mokyoungg/JS-JS%EC%97%90%EC%84%9C-Canvas-%EC%82%AC%EC%9A%A9%ED%95%98%EA%B8%B0%EB%A7%88%EC%9A%B0%EC%8A%A4%EB%A1%9C-%EA%B7%B8%EB%A6%AC%EA%B8%B0
