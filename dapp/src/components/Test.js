@@ -10,7 +10,7 @@ const Test = () => {
         try {
             const response = await axios.post("https://api.openai.com/v1/images/generations", {
                 model: "dall-e-2",
-                prompt: "128x128 pixel art of a cat character, NES 8bit style, minimal details",
+                prompt: "256x256 pixel art of a cat character, NES 8bit style, minimal details, clean grid, no background",
                 n: 1,
                 size: "256x256"
             },{
@@ -47,9 +47,9 @@ const Test = () => {
 
         ctx.imageSmoothingEnabled = false;
 
-        const pixelSize = 64;
-        ctx.drawImage(img, 0, 0, pixelSize, pixelSize);
-        ctx.drawImage(canvas, 0, 0, pixelSize, pixelSize, 0, 0, img.width, img.height);
+        const pixelSize = 64; // 다운스케일 할 때 픽셀 해상도
+        ctx.drawImage(img, 0, 0, pixelSize, pixelSize); // 해상도 낮추면서 픽셀화
+        ctx.drawImage(canvas, 0, 0, pixelSize, pixelSize, 0, 0, img.width, img.height); // 다시 업스케일
     };
 };
 

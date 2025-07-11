@@ -1,0 +1,1 @@
+export {default as PixelEditorPage} from "./PixelEditorPage";

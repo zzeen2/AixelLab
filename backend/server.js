@@ -20,9 +20,9 @@ app.get('/proxy-image', async(req,res) => {
         res.send(response.data);
     } catch (error) {
         console.log(error)
-        // console.log("Status:", error.response.status);
-        // console.log("Headers:", error.response.headers);
-        // console.log("Data:", error.response.data);
+        // console.log("status", error.response.status);
+        // console.log("deaders:", error.response.headers);
+        // console.log("data:", error.response.data);
     }
 })
 

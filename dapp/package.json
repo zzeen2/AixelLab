@@ -8,9 +8,12 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.10.0",
+    "color-thief-browser": "^2.0.2",
     "react": "^19.1.0",
+    "react-colorful": "^5.6.1",
     "react-dom": "^19.1.0",
     "react-scripts": "5.0.1",
+    "styled-components": "^6.1.19",
     "web-vitals": "^2.1.4"
   },
   "scripts": {

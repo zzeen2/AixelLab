@@ -1,0 +1,116 @@
+import React, { useRef, useEffect, useState } from "react";
+
+const PixelEditor = ({ draftImageUrl }) => {
+    const canvasRef = useRef(null);
+    const [gridColors, setGridColors] = useState([]);
+
+    const canvasWidth = 512;
+    const canvasHeight = 512;
+    const pixelSize = 16;
+    const cols = canvasWidth / pixelSize; // 32
+    const rows = canvasHeight / pixelSize;
+
+    const rgbToHex = (r, g, b) => {
+        return "#" + [r, g, b].map(x => x.toString(16).padStart(2, "0")).join(""); // #ffffff
+    };
+
+    const drawGridColors = () => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext("2d");
+        console.log("ctx", ctx)
+
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+        // 색상 매핑
+        for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+                const color = gridColors[y]?.[x] || "#ffffff";
+                ctx.fillStyle = color;
+                ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+            }
+        }
+
+        // 그리드 라인
+        ctx.strokeStyle = "#ccc";
+        for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+                ctx.strokeRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+            }
+        }
+    };
+
+    const drawImageAndMapGridColors = () => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext("2d");
+
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        const proxiedUrl = `http://localhost:4000/proxy-image?url=${encodeURIComponent(draftImageUrl)}`;
+        img.src = proxiedUrl;
+
+        img.onload = () => {
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+        ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+        
+        // 이미지 색상 추출
+        const imageData = ctx.getImageData(0, 0, canvasWidth, canvasHeight).data;
+
+        const newGridColors = [];
+
+        for (let y = 0; y < rows; y++) {
+            const row = [];
+            for (let x = 0; x < cols; x++) {
+            const px = x * pixelSize; 
+            const py = y * pixelSize; 
+            const i = (py * canvasWidth + px) * 4; 
+
+            const r = imageData[i];
+            const g = imageData[i + 1];
+            const b = imageData[i + 2];
+            const a = imageData[i + 3];
+
+            if (a === 0) {
+                    row.push("#ffffff");
+                } else {
+                    row.push(rgbToHex(r, g, b));
+                }
+            }
+            newGridColors.push(row);
+        }
+
+        setGridColors(newGridColors);
+        console.log("newGridColors");
+        };
+        // 이미지 로딩 디버깅
+        img.onerror = (err) => {
+            console.log(err);
+        };
+    };
+
+    // 이미지 로딩 후 매핑
+    useEffect(() => {
+        if (draftImageUrl) {
+            drawImageAndMapGridColors();
+        }
+    }, [draftImageUrl]);
+
+    // gridColors state 변경 시 캔버스 렌더링
+    useEffect(() => {
+        if (gridColors.length > 0) {
+            drawGridColors();
+        }
+    }, [gridColors]);
+
+    return (
+        <div>
+        <canvas
+            ref={canvasRef}
+            width={canvasWidth}
+            height={canvasHeight}
+            style={{ border: "1px solid black" }}
+        />
+        </div>
+    );
+};
+
+export default PixelEditor;
