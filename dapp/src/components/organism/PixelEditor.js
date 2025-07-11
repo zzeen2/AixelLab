@@ -1,8 +1,14 @@
 import React, { useRef, useEffect, useState } from "react";
+import {Palette} from "../molecules";
+import { ColorWheel } from "../atoms";
 
 const PixelEditor = ({ draftImageUrl }) => {
     const canvasRef = useRef(null);
     const [gridColors, setGridColors] = useState([]);
+    const [selectedColor, setSelectedColor] = useState("#ff0000");
+    const [palette, setPalette] = useState(["#ffffff"]);
+    const [isEyedropperMode, setIsEyedropperMode] = useState(false);
+
 
     const canvasWidth = 512;
     const canvasHeight = 512;
@@ -101,6 +107,46 @@ const PixelEditor = ({ draftImageUrl }) => {
         }
     }, [gridColors]);
 
+    const handleCanvasClick = (event) => {
+        const canvas = canvasRef.current;
+        const rect = canvas.getBoundingClientRect();
+        const x = Math.floor((event.clientX - rect.left) / pixelSize);
+        const y = Math.floor((event.clientY - rect.top) / pixelSize);
+
+        if (x >= 0 && x < cols && y >= 0 && y < rows) {
+            if (isEyedropperMode) {
+                const color = gridColors[y]?.[x];
+                if (color) {
+                    setSelectedColor(color);
+                    if (!palette.includes(color)) {
+                        setPalette((prev) => [...prev, color]);
+                    }
+                }
+                setIsEyedropperMode(false);
+            } else {
+                const newGrid = [...gridColors];
+                newGrid[y][x] = selectedColor;
+                setGridColors(newGrid);
+            }
+        }
+    };
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        canvas.addEventListener("click", handleCanvasClick);
+        return () => {
+            canvas.removeEventListener("click", handleCanvasClick);
+        };
+    }, [gridColors, selectedColor, isEyedropperMode, palette]);
+
+    const handleSelectColor = (color) => {
+        setSelectedColor(color);
+    };
+
+    const handleColorWheelChange = (newColor) => {
+        setSelectedColor(newColor);
+    };
+
     return (
         <div>
         <canvas
@@ -109,6 +155,27 @@ const PixelEditor = ({ draftImageUrl }) => {
             height={canvasHeight}
             style={{ border: "1px solid black" }}
         />
+
+        <button onClick={() => setIsEyedropperMode(!isEyedropperMode)}>
+            <img src="" alt="스포이드" />
+        </button>
+        <p>{isEyedropperMode ? "스포이드 ON" : "스포이드 OFF"}</p>
+
+        <h3>팔레트</h3>
+        <Palette palette={palette} onSelectColor={handleSelectColor} />
+
+        <h4>선택된 색상</h4>
+        <div
+            style={{
+            width: 32,
+            height: 32,
+            backgroundColor: selectedColor,
+            border: "1px solid black",
+            }}
+        />
+
+        <h3>컬러휠</h3>
+        <ColorWheel color={selectedColor} onChange={handleColorWheelChange} />
         </div>
     );
 };
