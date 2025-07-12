@@ -8,6 +8,8 @@ const PixelEditor = ({ draftImageUrl }) => {
     const [selectedColor, setSelectedColor] = useState("#ff0000");
     const [palette, setPalette] = useState(["#ffffff"]);
     const [isEyedropperMode, setIsEyedropperMode] = useState(false);
+    const [isPainting, setIsPainting] = useState(false);
+
 
 
     const canvasWidth = 512;
@@ -132,12 +134,64 @@ const PixelEditor = ({ draftImageUrl }) => {
     };
 
     useEffect(() => {
-        const canvas = canvasRef.current;
-        canvas.addEventListener("click", handleCanvasClick);
-        return () => {
-            canvas.removeEventListener("click", handleCanvasClick);
-        };
-    }, [gridColors, selectedColor, isEyedropperMode, palette]);
+    const canvas = canvasRef.current;
+
+    const getXY = (event) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = Math.floor((event.clientX - rect.left) / pixelSize);
+        const y = Math.floor((event.clientY - rect.top) / pixelSize);
+        return { x, y };
+    };
+
+    const paintPixel = (x, y) => {
+        if (x >= 0 && x < cols && y >= 0 && y < rows && !isEyedropperMode) {
+            const newGrid = [...gridColors];
+            newGrid[y][x] = selectedColor;
+            setGridColors(newGrid);
+        }
+    };
+
+    const handleMouseDown = (e) => {
+        const { x, y } = getXY(e);
+
+        if (isEyedropperMode) {
+            const color = gridColors[y]?.[x];
+            if (color) {
+                setSelectedColor(color);
+                if (!palette.includes(color)) {
+                    setPalette((prev) => [...prev, color]);
+                }
+            }
+            setIsEyedropperMode(false);
+            return;
+        }
+
+        setIsPainting(true);
+        paintPixel(x, y);
+    };
+
+    const handleMouseMove = (e) => {
+        if (!isPainting || isEyedropperMode) return;
+        const { x, y } = getXY(e);
+        paintPixel(x, y);
+    };
+
+    const handleMouseUp = () => {
+        setIsPainting(false);
+    };
+
+    canvas.addEventListener("mousedown", handleMouseDown);
+    canvas.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp); 
+
+    // 정리
+    return () => {
+        canvas.removeEventListener("mousedown", handleMouseDown);
+        canvas.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+    };
+}, [gridColors, selectedColor, isPainting, isEyedropperMode, palette]);
+
 
     const handleSelectColor = (color) => {
         setSelectedColor(color);
@@ -146,7 +200,7 @@ const PixelEditor = ({ draftImageUrl }) => {
     const handleColorWheelChange = (newColor) => {
         setSelectedColor(newColor);
     };
-
+    
     return (
         <div>
         <canvas
