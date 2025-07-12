@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import {Palette} from "../molecules";
 import { ColorWheel } from "../atoms";
+import {PreviewModal} from "../molecules";
 
 const PixelEditor = ({ draftImageUrl }) => {
     const canvasRef = useRef(null);
@@ -9,7 +10,8 @@ const PixelEditor = ({ draftImageUrl }) => {
     const [palette, setPalette] = useState(["#ffffff"]);
     const [isEyedropperMode, setIsEyedropperMode] = useState(false);
     const [isPainting, setIsPainting] = useState(false);
-
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+    const [previewUrl, setPreviewUrl] = useState("");
 
 
     const canvasWidth = 512;
@@ -17,6 +19,7 @@ const PixelEditor = ({ draftImageUrl }) => {
     const pixelSize = 16;
     const cols = canvasWidth / pixelSize; // 32
     const rows = canvasHeight / pixelSize;
+    //const previewImage = canvasRef.current.toDataURL("image/png");
 
     const rgbToHex = (r, g, b) => {
         return "#" + [r, g, b].map(x => x.toString(16).padStart(2, "0")).join(""); // #ffffff
@@ -134,63 +137,63 @@ const PixelEditor = ({ draftImageUrl }) => {
     };
 
     useEffect(() => {
-    const canvas = canvasRef.current;
+        const canvas = canvasRef.current;
 
-    const getXY = (event) => {
-        const rect = canvas.getBoundingClientRect();
-        const x = Math.floor((event.clientX - rect.left) / pixelSize);
-        const y = Math.floor((event.clientY - rect.top) / pixelSize);
-        return { x, y };
-    };
+        const getXY = (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((event.clientX - rect.left) / pixelSize);
+            const y = Math.floor((event.clientY - rect.top) / pixelSize);
+            return { x, y };
+        };
 
-    const paintPixel = (x, y) => {
-        if (x >= 0 && x < cols && y >= 0 && y < rows && !isEyedropperMode) {
-            const newGrid = [...gridColors];
-            newGrid[y][x] = selectedColor;
-            setGridColors(newGrid);
-        }
-    };
-
-    const handleMouseDown = (e) => {
-        const { x, y } = getXY(e);
-
-        if (isEyedropperMode) {
-            const color = gridColors[y]?.[x];
-            if (color) {
-                setSelectedColor(color);
-                if (!palette.includes(color)) {
-                    setPalette((prev) => [...prev, color]);
-                }
+        const paintPixel = (x, y) => {
+            if (x >= 0 && x < cols && y >= 0 && y < rows && !isEyedropperMode) {
+                const newGrid = [...gridColors];
+                newGrid[y][x] = selectedColor;
+                setGridColors(newGrid);
             }
-            setIsEyedropperMode(false);
-            return;
-        }
+        };
 
-        setIsPainting(true);
-        paintPixel(x, y);
-    };
+        const handleMouseDown = (e) => {
+            const { x, y } = getXY(e);
 
-    const handleMouseMove = (e) => {
-        if (!isPainting || isEyedropperMode) return;
-        const { x, y } = getXY(e);
-        paintPixel(x, y);
-    };
+            if (isEyedropperMode) {
+                const color = gridColors[y]?.[x];
+                if (color) {
+                    setSelectedColor(color);
+                    if (!palette.includes(color)) {
+                        setPalette((prev) => [...prev, color]);
+                    }
+                }
+                setIsEyedropperMode(false);
+                return;
+            }
 
-    const handleMouseUp = () => {
-        setIsPainting(false);
-    };
+            setIsPainting(true);
+            paintPixel(x, y);
+        };
 
-    canvas.addEventListener("mousedown", handleMouseDown);
-    canvas.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp); 
+        const handleMouseMove = (e) => {
+            if (!isPainting || isEyedropperMode) return;
+            const { x, y } = getXY(e);
+            paintPixel(x, y);
+        };
 
-    // 정리
-    return () => {
-        canvas.removeEventListener("mousedown", handleMouseDown);
-        canvas.removeEventListener("mousemove", handleMouseMove);
-        window.removeEventListener("mouseup", handleMouseUp);
-    };
-}, [gridColors, selectedColor, isPainting, isEyedropperMode, palette]);
+        const handleMouseUp = () => {
+            setIsPainting(false);
+        };
+
+        canvas.addEventListener("mousedown", handleMouseDown);
+        canvas.addEventListener("mousemove", handleMouseMove);
+        window.addEventListener("mouseup", handleMouseUp); 
+
+        // 정리
+        return () => {
+            canvas.removeEventListener("mousedown", handleMouseDown);
+            canvas.removeEventListener("mousemove", handleMouseMove);
+            window.removeEventListener("mouseup", handleMouseUp);
+        };
+    }, [gridColors, selectedColor, isPainting, isEyedropperMode, palette]);
 
 
     const handleSelectColor = (color) => {
@@ -200,6 +203,27 @@ const PixelEditor = ({ draftImageUrl }) => {
     const handleColorWheelChange = (newColor) => {
         setSelectedColor(newColor);
     };
+    
+    const handleShowPreview = () => {
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = canvasWidth;
+        tempCanvas.height = canvasHeight;
+        const ctx = tempCanvas.getContext("2d");
+
+        // 그리드 없이 픽셀색상만
+        for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+                const color = gridColors[y]?.[x] || "#ffffff";
+                ctx.fillStyle = color;
+                ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+            }
+        }
+
+        const url = tempCanvas.toDataURL("image/png");
+        setPreviewUrl(url);
+        setIsPreviewOpen(true);
+    };
+
     
     return (
         <div>
@@ -214,7 +238,7 @@ const PixelEditor = ({ draftImageUrl }) => {
             <img src="" alt="스포이드" />
         </button>
         <p>{isEyedropperMode ? "스포이드 ON" : "스포이드 OFF"}</p>
-
+        <button onClick={handleShowPreview}>수정완료</button>
         <h3>팔레트</h3>
         <Palette palette={palette} onSelectColor={handleSelectColor} />
 
@@ -230,7 +254,14 @@ const PixelEditor = ({ draftImageUrl }) => {
 
         <h3>컬러휠</h3>
         <ColorWheel color={selectedColor} onChange={handleColorWheelChange} />
+
+        <PreviewModal
+            isOpen={isPreviewOpen}
+            imageUrl={previewUrl}
+            onClose={() => setIsPreviewOpen(false)}
+        />
         </div>
+        
     );
 };
 
