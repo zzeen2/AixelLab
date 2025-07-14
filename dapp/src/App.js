@@ -1,13 +1,14 @@
-import React from "react";
-import Test from "./components/Test";
-import {PixelEditorPage} from "./components/pages"
-import { PixelEditor } from "./components/organism";
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import MainPage from './components/pages/MainPage';
 
 function App() {
   return (
-    <div className="App">
-      <PixelEditorPage></PixelEditorPage>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<MainPage />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

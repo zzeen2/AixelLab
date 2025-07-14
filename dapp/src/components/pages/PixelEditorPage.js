@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react'
 import { PixelEditor } from '../organism';
-import AIDraftModal from '../molecules/AIDraftModal';
+import {AIDraftModal} from '../molecules';
 import { generateImage } from '../../api/openai';
 
 const PixelEditorPage = () => {
