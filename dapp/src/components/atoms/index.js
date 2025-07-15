@@ -1,3 +1,6 @@
 export {default as ColorWheel} from "./ColorWheel"
 export {default as ColorBlock} from "./ColorBlock"
 export {default as SectionTitle} from "./SectionTitle"
+export {default as Logo} from "./Logo"
+export {default as NetworkInfo} from "./NetworkInfo"
+export {default as WalletInfo} from "./WalletInfo"
