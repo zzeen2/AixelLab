@@ -21,6 +21,8 @@ export const generateImage = async(prompt) => {
         console.log(response.data);
         return response.data.data[0].url;
     } catch (error) {
+        console.log("이미지 생성 에러")
         console.log(error)
+        alert("Image creation failed. Please try again in a moment.")
     }
 }

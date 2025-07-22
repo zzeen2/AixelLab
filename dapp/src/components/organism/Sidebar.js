@@ -1,5 +1,6 @@
 import React from "react";
 import styled from "styled-components";
+import { useNavigate } from "react-router-dom";
 import { CreateArtworkModal } from "../molecules";
 
 // SVG Icons - Simplified
@@ -132,6 +133,7 @@ const Divider = styled.div`
 
 const Sidebar = ({ isExpanded }) => {
     const [isModalOpen, setIsModalOpen] = React.useState(false);
+    const navigate = useNavigate();
 
     const handleStudioClick = () => {
         setIsModalOpen(true);
@@ -143,13 +145,12 @@ const Sidebar = ({ isExpanded }) => {
 
     const handleOptionSelect = (option) => {
         console.log('Selected option:', option);
-        // 여기서 라우팅 로직을 추가할 수 있습니다
         if (option === 'ai-draft') {
-            // AI 초안 페이지로 이동
-            console.log('Navigate to AI draft page');
+            // AI 드래프트 페이지로 이동
+            navigate('/ai-draft');
         } else if (option === 'blank-canvas') {
             // 빈 캔버스 페이지로 이동
-            console.log('Navigate to blank canvas page');
+            navigate('/editor/blank-canvas');
         }
     };
 

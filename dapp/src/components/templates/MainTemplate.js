@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import {CarouselSection} from '../organism';
 import styled from 'styled-components';
 import {Header as HeaderComponent, Sidebar as SidebarComponent} from '../organism';
 import {Logo as LogoComponent} from '../atoms';
@@ -9,6 +8,7 @@ const Container = styled.div`
     flex-direction: column;
     height: 100vh;
     background-color: #0d1017;
+    overflow: hidden;
 `;
 
 const HeaderWrapper = styled.header`
@@ -28,7 +28,7 @@ const Body = styled.div`
     margin-left: ${props => props.isSidebarExpanded ? '180px' : '55px'};
     height: calc(100vh - 52px);
     transition: margin-left 0.3s ease;
-    overflow-x: hidden;
+    overflow: hidden;
 `;
 
 const Sidebar = styled.aside`
@@ -52,7 +52,7 @@ const Sidebar = styled.aside`
 const MainContent = styled.main`
     background-color: #0d1017;
     padding: 24px;
-    overflow-y: auto;
+    overflow: hidden;
     height: 100%;
 `;
 

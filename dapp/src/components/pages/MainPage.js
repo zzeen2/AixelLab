@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {MainTemplate} from "../templates";
 import styled from "styled-components";
 
@@ -57,6 +58,12 @@ const CardText = styled.p`
 `;
 
 const MainPage = () => {
+    const navigate = useNavigate();
+
+    const handleTestNavigation = () => {
+        navigate('/editor/ai-draft');
+    };
+
     return (
         <MainTemplate>
             <PageContainer>
@@ -80,6 +87,23 @@ const MainPage = () => {
                         </CardText>
                     </ContentCard>
                 </ContentGrid>
+
+                {/* 테스트용 네비게이션 버튼 */}
+                <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                    <button 
+                        onClick={handleTestNavigation}
+                        style={{
+                            padding: '10px 20px',
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Test: Go to AI Draft Editor
+                    </button>
+                </div>
             </PageContainer>
         </MainTemplate>
     );
