@@ -17,8 +17,8 @@ const ModalOverlay = styled.div`
 const ModalContainer = styled.div`
     background-color: #0d1017;
     border-radius: 12px;
-    width: 90%;
-    max-width: 800px;
+    width: 100%;
+    max-width: 1100px;
     max-height: 90vh;
     overflow-y: auto;
     position: relative;
@@ -29,9 +29,9 @@ const ModalHeader = styled.div`
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 24px 24px 0 24px;
+    padding: 7px 7px 0 10px;
     border-bottom: 1px solid #2a2a2a;
-    padding-bottom: 24px;
+    padding-bottom: 7px;
 `;
 
 const CloseButton = styled.button`
@@ -48,26 +48,26 @@ const CloseButton = styled.button`
     transition: all 0.2s ease;
     
     &:hover {
-        background-color: #2a2a2a;
+        // background-color: #2a2a2a;
         color: #ffffff;
     }
 `;
 
 const ModalContent = styled.div`
     display: flex;
-    padding: 24px;
-    gap: 40px;
+    padding: 32px;
+    gap: 50px;
 `;
 
 const LeftSection = styled.div`
     flex: 1;
-    max-width: 300px;
+    max-width: 350px;
 `;
 
 const RightSection = styled.div`
     flex: 2;
     display: flex;
-    gap: 20px;
+    gap: 30px;
 `;
 
 const Title = styled.h1`
@@ -104,7 +104,7 @@ const OptionCard = styled.div`
     background-color: #1a1a1a;
     border: 1px solid #2a2a2a;
     border-radius: 12px;
-    padding: 24px;
+    padding: 32px;
     flex: 1;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -116,15 +116,25 @@ const OptionCard = styled.div`
 `;
 
 const CardIcon = styled.div`
-    width: 60px;
-    height: 60px;
-    border-radius: 12px;
-    margin-bottom: 16px;
+    width: 80px;
+    height: 80px;
+    border-radius: 16px;
+    margin-bottom: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
     background: ${props => props.gradient || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'};
+    position: relative;
+    
+    &::after {
+        content: '';
+        position: absolute;
+        width: 32px;
+        height: 32px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 6px;
+        ${props => props.iconStyle || ''}
+    }
 `;
 
 const CardTitle = styled.h3`
@@ -173,10 +183,19 @@ const FeatureItem = styled.li`
     color: #8b949e;
     font-size: 13px;
     margin-bottom: 8px;
+    position: relative;
+    padding-left: 20px;
     
     &:before {
-        content: '${props => props.icon}';
-        font-size: 14px;
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 4px;
+        height: 4px;
+        background: #3b82f6;
+        border-radius: 50%;
     }
 `;
 
@@ -203,49 +222,51 @@ const CreateArtworkModal = ({ isOpen, onClose, onSelectOption }) => {
                 
                 <ModalContent>
                     <LeftSection>
-                        <Title>어떤 방식으로 작품을 만들까요?</Title>
+                        <Title>What do you want to create?</Title>
                         <GuideText>
-                            AI 초안을 활용하거나 빈 캔버스에서 시작할 수 있습니다.
+                            View our guide to help decide between AI draft and blank canvas creation.
                         </GuideText>
-                        <GuideButton>가이드 보기</GuideButton>
+                        <GuideButton>View Guide</GuideButton>
                     </LeftSection>
                     
                     <RightSection>
                         <OptionCard onClick={handleAIDraft}>
-                            <CardIcon gradient="linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)">
-                                🎨
-                            </CardIcon>
-                            <CardTitle>AI 초안으로 시작</CardTitle>
-                            <CardButton primary>AI 초안 생성</CardButton>
+                            <CardIcon 
+                                gradient="linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)"
+                                iconStyle="clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);"
+                            />
+                            <CardTitle>AI Draft</CardTitle>
+                            <CardButton primary>Create Draft</CardButton>
                             <CardDescription>
-                                AI가 생성한 픽셀 아트 초안을 기반으로 수정하고 완성하세요. 
-                                창작 아이디어를 빠르게 구체화할 수 있습니다.
+                                Start with AI-generated pixel art drafts and refine them to perfection. 
+                                Quickly materialize your creative ideas with AI assistance.
                             </CardDescription>
                             <FeatureList>
-                                <FeatureItem icon="🤖">AI DALL-E 기반 초안 생성</FeatureItem>
-                                <FeatureItem icon="⚡">빠른 아이디어 구체화</FeatureItem>
-                                <FeatureItem icon="🎯">프롬프트 기반 정확한 방향성</FeatureItem>
-                                <FeatureItem icon="🔄">무제한 초안 생성 가능</FeatureItem>
-                                <FeatureItem icon="✨">고품질 픽셀 아트 스타일</FeatureItem>
+                                <FeatureItem>AI DALL-E powered draft generation</FeatureItem>
+                                <FeatureItem>Rapid idea visualization</FeatureItem>
+                                <FeatureItem>Prompt-based precise direction</FeatureItem>
+                                <FeatureItem>Unlimited draft creation</FeatureItem>
+                                <FeatureItem>High-quality pixel art style</FeatureItem>
                             </FeatureList>
                         </OptionCard>
                         
                         <OptionCard onClick={handleBlankCanvas}>
-                            <CardIcon gradient="linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)">
-                                ✏️
-                            </CardIcon>
-                            <CardTitle>빈 캔버스에서 시작</CardTitle>
-                            <CardButton>캔버스 열기</CardButton>
+                            <CardIcon 
+                                gradient="linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)"
+                                iconStyle="clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);"
+                            />
+                            <CardTitle>Blank Canvas</CardTitle>
+                            <CardButton>Open Canvas</CardButton>
                             <CardDescription>
-                                완전히 빈 캔버스에서 처음부터 픽셀 아트를 그려보세요. 
-                                자유로운 창작과 세밀한 제어가 가능합니다.
+                                Start from scratch with a completely blank canvas. 
+                                Enjoy complete creative freedom and precise pixel-level control.
                             </CardDescription>
                             <FeatureList>
-                                <FeatureItem icon="🎨">완전한 창작 자유도</FeatureItem>
-                                <FeatureItem icon="🔧">세밀한 픽셀 단위 제어</FeatureItem>
-                                <FeatureItem icon="🎯">정확한 디자인 구현</FeatureItem>
-                                <FeatureItem icon="💡">순수한 창작 아이디어</FeatureItem>
-                                <FeatureItem icon="⚡">즉시 작업 시작</FeatureItem>
+                                <FeatureItem>Complete creative freedom</FeatureItem>
+                                <FeatureItem>Precise pixel-level control</FeatureItem>
+                                <FeatureItem>Accurate design implementation</FeatureItem>
+                                <FeatureItem>Pure creative ideas</FeatureItem>
+                                <FeatureItem>Instant work start</FeatureItem>
                             </FeatureList>
                         </OptionCard>
                     </RightSection>

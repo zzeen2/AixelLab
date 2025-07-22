@@ -1,5 +1,6 @@
 import React from "react";
 import styled from "styled-components";
+import { CreateArtworkModal } from "../molecules";
 
 // SVG Icons - Simplified
 const DiscoverIcon = () => (
@@ -130,70 +131,100 @@ const Divider = styled.div`
 `;
 
 const Sidebar = ({ isExpanded }) => {
+    const [isModalOpen, setIsModalOpen] = React.useState(false);
+
+    const handleStudioClick = () => {
+        setIsModalOpen(true);
+    };
+
+    const handleModalClose = () => {
+        setIsModalOpen(false);
+    };
+
+    const handleOptionSelect = (option) => {
+        console.log('Selected option:', option);
+        // 여기서 라우팅 로직을 추가할 수 있습니다
+        if (option === 'ai-draft') {
+            // AI 초안 페이지로 이동
+            console.log('Navigate to AI draft page');
+        } else if (option === 'blank-canvas') {
+            // 빈 캔버스 페이지로 이동
+            console.log('Navigate to blank canvas page');
+        }
+    };
+
     return (
-        <SidebarContainer isExpanded={isExpanded}>
-            <Navigation>
-                <NavItem active={true}>
-                    <NavIcon>
-                        <DiscoverIcon />
-                    </NavIcon>
-                    <NavText isExpanded={isExpanded}>Discover</NavText>
-                </NavItem>
-                <NavItem>
-                    <NavIcon>
-                        <NFTsIcon />
-                    </NavIcon>
-                    <NavText isExpanded={isExpanded}>NFTs</NavText>
-                </NavItem>
-                <NavItem>
-                    <NavIcon>
-                        <ActivityIcon />
-                    </NavIcon>
-                    <NavText isExpanded={isExpanded}>Activity</NavText>
-                </NavItem>
-                <NavItem>
-                    <NavIcon>
-                        <RewardsIcon />
-                    </NavIcon>
-                    <NavText isExpanded={isExpanded}>Rewards</NavText>
-                </NavItem>
-                <NavItem>
-                    <NavIcon>
-                        <StudioIcon />
-                    </NavIcon>
-                    <NavText isExpanded={isExpanded}>Studio</NavText>
-                </NavItem>
-                <NavItem>
-                    <NavIcon>
-                        <ProfileIcon />
-                    </NavIcon>
-                    <NavText isExpanded={isExpanded}>Profile</NavText>
-                </NavItem>
-            </Navigation>
+        <>
+            <SidebarContainer isExpanded={isExpanded}>
+                <Navigation>
+                    <NavItem active={true}>
+                        <NavIcon>
+                            <DiscoverIcon />
+                        </NavIcon>
+                        <NavText isExpanded={isExpanded}>Discover</NavText>
+                    </NavItem>
+                    <NavItem>
+                        <NavIcon>
+                            <NFTsIcon />
+                        </NavIcon>
+                        <NavText isExpanded={isExpanded}>NFTs</NavText>
+                    </NavItem>
+                    <NavItem>
+                        <NavIcon>
+                            <ActivityIcon />
+                        </NavIcon>
+                        <NavText isExpanded={isExpanded}>Activity</NavText>
+                    </NavItem>
+                    <NavItem>
+                        <NavIcon>
+                            <RewardsIcon />
+                        </NavIcon>
+                        <NavText isExpanded={isExpanded}>Rewards</NavText>
+                    </NavItem>
+                    <NavItem onClick={handleStudioClick}>
+                        <NavIcon>
+                            <StudioIcon />
+                        </NavIcon>
+                        <NavText isExpanded={isExpanded}>Studio</NavText>
+                    </NavItem>
+                    <NavItem>
+                        <NavIcon>
+                            <ProfileIcon />
+                        </NavIcon>
+                        <NavText isExpanded={isExpanded}>Profile</NavText>
+                    </NavItem>
+                </Navigation>
 
-            <Divider />
+                <Divider />
 
-            <Navigation>
-                <NavItem>
-                    <NavIcon>
-                        <ResourcesIcon />
-                    </NavIcon>
-                    <NavText isExpanded={isExpanded}>Resources</NavText>
-                </NavItem>
-                <NavItem>
-                    <NavIcon>
-                        <SettingsIcon />
-                    </NavIcon>
-                    <NavText isExpanded={isExpanded}>Settings</NavText>
-                </NavItem>
-                <NavItem>
-                    <NavIcon>
-                        <SupportIcon />
-                    </NavIcon>
-                    <NavText isExpanded={isExpanded}>Support</NavText>
-                </NavItem>
-            </Navigation>
-        </SidebarContainer>
+                <Navigation>
+                    <NavItem>
+                        <NavIcon>
+                            <ResourcesIcon />
+                        </NavIcon>
+                        <NavText isExpanded={isExpanded}>Resources</NavText>
+                    </NavItem>
+                    <NavItem>
+                        <NavIcon>
+                            <SettingsIcon />
+                        </NavIcon>
+                        <NavText isExpanded={isExpanded}>Settings</NavText>
+                    </NavItem>
+                    <NavItem>
+                        <NavIcon>
+                            <SupportIcon />
+                        </NavIcon>
+                        <NavText isExpanded={isExpanded}>Support</NavText>
+                    </NavItem>
+                </Navigation>
+            </SidebarContainer>
+            
+            <CreateArtworkModal 
+                isOpen={isModalOpen}
+                onClose={handleModalClose}
+                onSelectOption={handleOptionSelect}
+            />
+        </>
     );
 };
 
