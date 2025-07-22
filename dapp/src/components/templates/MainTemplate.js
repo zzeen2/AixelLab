@@ -19,7 +19,6 @@ const Content = styled.main`
 const MainTemplate = ({ children }) => {
     return (
         <Container>
-
             <Header />
             <Content>{children}</Content>
         </Container>

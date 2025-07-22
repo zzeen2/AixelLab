@@ -1,5 +1,5 @@
 import React from "react";
-import ColorBlock from "../atoms/ColorBlock";
+import { ColorBlock } from "../../atoms";
 
 const Palette = ({ palette, onSelectColor }) => {
     return (

@@ -1,5 +1,8 @@
-export {default as AIDraftModal} from "./AIDraftModal"
-export {default as Palette} from "./Palette"
-export {default as SlideCard} from "./SlideCard"
-export {default as PreviewModal} from "./PreviewModal"
-export {default as SearchBar} from "./SearchBar"
+// Editor related molecules
+export * from './editor';
+
+// Modal related molecules
+export * from './modals';
+
+// UI related molecules
+export * from './ui';
