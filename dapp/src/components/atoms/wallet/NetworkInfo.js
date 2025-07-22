@@ -9,7 +9,8 @@ const NetworkBox = styled.div`
     color: white;
     padding: 6px 12px;
     border-radius: 8px;
-    font-size: 0.9rem;
+    font-size: 13px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 `;
 
 const Circle = styled.div`

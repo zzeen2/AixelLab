@@ -8,7 +8,8 @@ const WalletBox = styled.div`
     color: white;
     padding: 6px 12px;
     border-radius: 8px;
-    font-size: 0.9rem;
+    font-size: 13px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 `;
 
 const Avatar = styled.div`
@@ -20,7 +21,8 @@ const Avatar = styled.div`
 `;
 
 const Address = styled.span`
-    font-family: monospace;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    font-size: 12px;
 `;
 
 const WalletInfo = ({ address = "0x0000...0000" }) => {
