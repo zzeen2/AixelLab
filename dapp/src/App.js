@@ -4,6 +4,7 @@ import MainPage from './components/pages/MainPage';
 import PixelEditorPage from './components/pages/PixelEditorPage';
 import AIDraftPage from './components/pages/AIDraftPage';
 import BlankCanvasPage from './components/pages/BlankCanvasPage';
+import ProfilePage from './components/pages/ProfilePage';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/blank-canvas" element={<BlankCanvasPage />} />
         <Route path="/editor/blank-canvas" element={<PixelEditorPage mode="blank-canvas" />} />
         <Route path="/ai-draft" element={<AIDraftPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

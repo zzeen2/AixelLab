@@ -188,7 +188,7 @@ const Sidebar = ({ isExpanded }) => {
                         </NavIcon>
                         <NavText isExpanded={isExpanded}>Studio</NavText>
                     </NavItem>
-                    <NavItem>
+                    <NavItem onClick={() => navigate('/profile')}>
                         <NavIcon>
                             <ProfileIcon />
                         </NavIcon>
