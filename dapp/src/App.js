@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainPage from './components/pages/MainPage';
 import PixelEditorPage from './components/pages/PixelEditorPage';
 import AIDraftPage from './components/pages/AIDraftPage';
+import BlankCanvasPage from './components/pages/BlankCanvasPage';
 
 function App() {
   return (
@@ -11,6 +12,7 @@ function App() {
         <Route path="/" element={<MainPage />} />
         <Route path="/editor" element={<PixelEditorPage />} />
         <Route path="/editor/ai-draft" element={<PixelEditorPage mode="ai-draft" />} />
+        <Route path="/blank-canvas" element={<BlankCanvasPage />} />
         <Route path="/editor/blank-canvas" element={<PixelEditorPage mode="blank-canvas" />} />
         <Route path="/ai-draft" element={<AIDraftPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

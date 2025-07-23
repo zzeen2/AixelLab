@@ -174,23 +174,21 @@ const AIDraftPage = () => {
         setError(null);
         
         try {
+            //todo 프롬프트 수정
             const enhancedPrompt = `${prompt} in pixel art style, 8-bit, retro gaming aesthetic`;
-            console.log('Generating image with prompt:', enhancedPrompt);
             
             const imageUrl = await generateImage(enhancedPrompt);
-            console.log('Generated image URL:', imageUrl);
-            
+            console.log("imageUrl", imageUrl)
             setGeneratedImage(imageUrl);
         } catch (error) {
-            console.error('Error generating image:', error);
-            setError(error.message || '이미지 생성에 실패했습니다. 다시 시도해주세요.');
-        } finally {
-            setIsGenerating(false);
-        }
+            console.error(error);
+        }finally {
+        setIsGenerating(false); 
+    }
     };
 
     const handleSave = () => {
-        // TODO: 이미지 저장 로직 구현
+        // TODO 이미지 저장 
         console.log('Saving image...');
     };
 
@@ -244,7 +242,6 @@ const AIDraftPage = () => {
                                 }}
                                 onError={(e) => {
                                     console.error('Image load error:', e);
-                                    setError('이미지를 불러올 수 없습니다.');
                                 }}
                             />
                         ) : (

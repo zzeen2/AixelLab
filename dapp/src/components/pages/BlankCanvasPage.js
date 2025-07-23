@@ -38,7 +38,6 @@ const ModeBadge = styled.span`
     letter-spacing: 0.5px;
 `;
 
-
 const EditorContainer = styled.div`
     background-color: #1a1a1a;
     border-radius: 12px;
@@ -51,15 +50,15 @@ const EditorContainer = styled.div`
     overflow: auto;
 `;
 
-const PixelEditorPage = ({ mode }) => {
-    const [draftImageUrl, setDraftImageUrl] = useState("");
+const BlankCanvasPage = () => {
+    const [blankCanvasImage, setBlankCanvasImage] = useState("");
 
-    // localStorage에서 이미지 URL 가져오기
+    // localStorage에서 빈 캔버스 이미지 URL 가져오기
     useEffect(() => {
-        const savedImageUrl = localStorage.getItem('draftImageUrl');
+        const savedImageUrl = localStorage.getItem('blankCanvasImage');
         if (savedImageUrl) {
-            setDraftImageUrl(savedImageUrl);
-            localStorage.removeItem('draftImageUrl'); // 사용 후 삭제
+            setBlankCanvasImage(savedImageUrl);
+            localStorage.removeItem('blankCanvasImage'); // 사용 후 삭제
         }
     }, []);
     
@@ -68,15 +67,15 @@ const PixelEditorPage = ({ mode }) => {
             <PageContainer>
                 <HeaderSection>
                     <Title>Pixel Editor</Title>
-                    {mode && <ModeBadge>{mode === 'ai-draft' ? 'AI Draft' : 'Blank Canvas'}</ModeBadge>}
+                    <ModeBadge>Blank Canvas</ModeBadge>
                 </HeaderSection>
 
                 <EditorContainer>
-                    <PixelEditor draftImageUrl={draftImageUrl} />
+                    <PixelEditor draftImageUrl={blankCanvasImage} />
                 </EditorContainer>
             </PageContainer>
         </MainTemplate>
     )
 }
 
-export default PixelEditorPage
+export default BlankCanvasPage 

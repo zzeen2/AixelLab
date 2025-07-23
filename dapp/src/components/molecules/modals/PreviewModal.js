@@ -116,23 +116,6 @@ const UploadButton = styled.button`
     }
 `;
 
-const StatusMessage = styled.div`
-    color: ${props => props.isSuccess ? '#10b981' : props.isError ? '#ef4444' : '#f59e0b'};
-    font-size: 14px;
-    margin: 12px 0;
-    font-weight: 500;
-`;
-
-const IPFSLink = styled.a`
-    color: #3b82f6;
-    text-decoration: none;
-    font-size: 14px;
-    word-break: break-all;
-    
-    &:hover {
-        text-decoration: underline;
-    }
-`;
 
 const PreviewModal = ({ isOpen, imageUrl, onClose }) => {
     const [isUploading, setIsUploading] = useState(false);
@@ -174,30 +157,21 @@ const PreviewModal = ({ isOpen, imageUrl, onClose }) => {
     return (
         <Overlay onClick={onClose}>
             <ModalBox onClick={(e) => e.stopPropagation()}>
-                <ModalTitle>🎨 Pixel Art Preview</ModalTitle>
+                <ModalTitle>Preview</ModalTitle>
                 
                 <ImageContainer>
                     <PreviewImage src={imageUrl} alt="Pixel Art Preview" />
                 </ImageContainer>
-                
-                {uploadStatus && (
-                    <StatusMessage 
-                        isSuccess={uploadStatus.includes('성공')}
-                        isError={uploadStatus.includes('실패')}
-                    >
-                        {uploadStatus}
-                    </StatusMessage>
-                )}
                 
                 <ButtonContainer>
                     <UploadButton 
                         onClick={handleUploadToIPFS}
                         disabled={isUploading}
                     >
-                        {isUploading ? '⏳ Uploading...' : '🌐 Upload to IPFS'}
+                        {isUploading ? 'Uploading...' : 'Upload to IPFS'}
                     </UploadButton>
                     <DownloadButton onClick={handleDownload}>
-                        💾 Download
+                        Download
                     </DownloadButton>
                     <CloseButton onClick={onClose}>
                         ✕ Close

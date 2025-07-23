@@ -4,7 +4,6 @@ import {Palette} from "../molecules";
 import { ColorWheel } from "../atoms";
 import {PreviewModal} from "../molecules";
 
-// Styled Components
 const EditorLayout = styled.div`
     display: flex;
     height: 100%;
@@ -39,7 +38,6 @@ const SidebarSection = styled.div`
     overflow-y: auto;
     max-height: 100%;
     
-    /* 스크롤바 숨기기 */
     &::-webkit-scrollbar {
         display: none;
     }
@@ -139,7 +137,7 @@ const PixelEditor = ({ draftImageUrl }) => {
     const [isPainting, setIsPainting] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [previewUrl, setPreviewUrl] = useState("");
-
+    const [grid, setGrid] = useState([]);
 
     const canvasWidth = 512;
     const canvasHeight = 512;
@@ -225,10 +223,39 @@ const PixelEditor = ({ draftImageUrl }) => {
         };
     };
 
-    // 이미지 로딩 후 매핑
+    const initializeEmptyGrid = () => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        
+        const emptyGridColors = [];
+        for (let y = 0; y < rows; y++) {
+            const row = [];
+            for (let x = 0; x < cols; x++) {
+                row.push("#ffffff"); 
+            }
+            emptyGridColors.push(row);
+        }
+        
+        setGridColors(emptyGridColors);
+        
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        
+        ctx.strokeStyle = "#ccc";
+        for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+                ctx.strokeRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+            }
+        }
+    };
+
+
     useEffect(() => {
         if (draftImageUrl) {
             drawImageAndMapGridColors();
+        } else {
+            initializeEmptyGrid();
         }
     }, [draftImageUrl]);
 
@@ -273,11 +300,22 @@ const PixelEditor = ({ draftImageUrl }) => {
             return { x, y };
         };
 
-        const paintPixel = (x, y) => {
-            if (x >= 0 && x < cols && y >= 0 && y < rows && !isEyedropperMode) {
+        const paintPixel = (x, y, color) => {
+            if (!gridColors || gridColors.length === 0) return;
+            
+            if (x >= 0 && x < cols && y >= 0 && y < rows) {
                 const newGrid = [...gridColors];
-                newGrid[y][x] = selectedColor;
+                newGrid[y][x] = color;
                 setGridColors(newGrid);
+                
+                // 캔버스에 그리기
+                const ctx = canvasRef.current.getContext('2d');
+                ctx.fillStyle = color;
+                ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+                
+                // 그리드 라인 다시 그리기
+                ctx.strokeStyle = "#ccc";
+                ctx.strokeRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
             }
         };
 
@@ -297,13 +335,13 @@ const PixelEditor = ({ draftImageUrl }) => {
             }
 
             setIsPainting(true);
-            paintPixel(x, y);
+            paintPixel(x, y, selectedColor);
         };
 
         const handleMouseMove = (e) => {
             if (!isPainting || isEyedropperMode) return;
             const { x, y } = getXY(e);
-            paintPixel(x, y);
+            paintPixel(x, y, selectedColor);
         };
 
         const handleMouseUp = () => {
@@ -378,7 +416,7 @@ const PixelEditor = ({ draftImageUrl }) => {
                 </ToolDescription>
                 
                 <CompleteButton onClick={handleShowPreview}>
-                    ✅ Complete (Preview)
+                    Complete (Preview)
                 </CompleteButton>
             </ToolsSection>
                 

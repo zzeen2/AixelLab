@@ -150,7 +150,7 @@ const Sidebar = ({ isExpanded }) => {
             navigate('/ai-draft');
         } else if (option === 'blank-canvas') {
             // 빈 캔버스 페이지로 이동
-            navigate('/editor/blank-canvas');
+            navigate('/blank-canvas');
         }
     };
 
