@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
+import { useNavigate } from "react-router-dom";
+import { uploadToIPFS } from "../../../api/ipfs";
 
 const Overlay = styled.div`
     position: fixed;
@@ -91,9 +93,55 @@ const DownloadButton = styled.button`
     }
 `;
 
+const UploadButton = styled.button`
+    background: #10b981;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover {
+        background: #059669;
+        transform: translateY(-1px);
+    }
+    
+    &:disabled {
+        background: #6b7280;
+        cursor: not-allowed;
+        transform: none;
+    }
+`;
+
+const StatusMessage = styled.div`
+    color: ${props => props.isSuccess ? '#10b981' : props.isError ? '#ef4444' : '#f59e0b'};
+    font-size: 14px;
+    margin: 12px 0;
+    font-weight: 500;
+`;
+
+const IPFSLink = styled.a`
+    color: #3b82f6;
+    text-decoration: none;
+    font-size: 14px;
+    word-break: break-all;
+    
+    &:hover {
+        text-decoration: underline;
+    }
+`;
+
 const PreviewModal = ({ isOpen, imageUrl, onClose }) => {
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadStatus, setUploadStatus] = useState('');
+    const navigate = useNavigate();
+
     if (!isOpen) return null;
 
+    // 이미지 다운로드
     const handleDownload = () => {
         const link = document.createElement('a');
         link.href = imageUrl;
@@ -101,6 +149,26 @@ const PreviewModal = ({ isOpen, imageUrl, onClose }) => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    };
+
+    const handleUploadToIPFS = async () => {
+        try {
+            setIsUploading(true);
+            setUploadStatus('Uploading...');
+            
+            const result = await uploadToIPFS(imageUrl);
+            
+            //todo 라우팅처리
+            setTimeout(() => {
+                onClose();
+                navigate('/');
+            }, 2000);
+            
+        } catch (error) {
+            setUploadStatus('업로드 실패: ' + error.message);
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     return (
@@ -112,7 +180,22 @@ const PreviewModal = ({ isOpen, imageUrl, onClose }) => {
                     <PreviewImage src={imageUrl} alt="Pixel Art Preview" />
                 </ImageContainer>
                 
+                {uploadStatus && (
+                    <StatusMessage 
+                        isSuccess={uploadStatus.includes('성공')}
+                        isError={uploadStatus.includes('실패')}
+                    >
+                        {uploadStatus}
+                    </StatusMessage>
+                )}
+                
                 <ButtonContainer>
+                    <UploadButton 
+                        onClick={handleUploadToIPFS}
+                        disabled={isUploading}
+                    >
+                        {isUploading ? '⏳ Uploading...' : '🌐 Upload to IPFS'}
+                    </UploadButton>
                     <DownloadButton onClick={handleDownload}>
                         💾 Download
                     </DownloadButton>
