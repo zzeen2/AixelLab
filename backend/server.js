@@ -7,20 +7,7 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 session = require('express-session');
 require('dotenv').config();
-
-app.use(cors());
-app.use(session({
-    secret: SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: { secure: false }
-}));
-
-app.use(passport.initialize());
-app.use(passport.session());
-
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true })); 
+const db = require('./models');
 
 // pinata
 const PINATA_API_KEY = process.env.PINATA_API_KEY;
@@ -32,6 +19,23 @@ const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL;
 const SESSION_SECRET = process.env.SESSION_SECRET;
 
+app.use(cors({
+    origin: 'http://localhost:3000',
+    credentials: true
+}));
+
+app.use(session({
+    secret: SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false }
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 //passport 설정
 // 사용자 직렬화
@@ -50,6 +54,8 @@ passport.use(new GoogleStrategy({
     callbackURL: GOOGLE_CALLBACK_URL
 }, async (accessToken, refreshToken, profile, done) => {
     try {
+        console.log('Google 프로필 정보:', profile);
+        
         // 계정 추상화 지갑 주소
         const walletAddress = `0x${profile.id.slice(0, 40)}`;
         
@@ -62,8 +68,10 @@ passport.use(new GoogleStrategy({
             provider: 'google'
         };
         
+        console.log('생성된 유저 정보:', user);
         return done(null, user);
     } catch (error) {
+        console.error('Google Strategy 에러:', error);
         return done(error, null);
     }
 }));
@@ -102,6 +110,7 @@ passport.use(new GoogleStrategy({
 // });
 
 // react에서 요청보내면 url 받아서 proxy 전달
+
 app.get('/proxy-image', async(req,res) => {
     const {url} = req.query;
     console.log("url : ", url)
@@ -153,7 +162,7 @@ app.post('/upload-to-ipfs', async(req,res) => {
             }
         })
 
-        console.log("response", response);
+        console.log("response data", response.data);
         const ipfsHash = response.data.IpfsHash;
         const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`
 
@@ -178,9 +187,10 @@ app.get('/auth/google', passport.authenticate('google', {
 
 // Google 인증 후 콜백
 app.get('/auth/google/callback', 
-    passport.authenticate('google', { failureRedirect: '/login' }),
+    passport.authenticate('google', { failureRedirect: 'http://localhost:3000/login' }),
     (req, res) => {
-        res.redirect('http://localhost:3000/auth/success');
+        console.log('Google OAuth 콜백:', req.user);
+        res.redirect('http://localhost:3000/');
     }
 );
 
@@ -209,16 +219,31 @@ app.get('/auth/logout', (req, res) => {
     });
 });
 
-
-app.get('/auth/test', (req, res) => {
-    res.json({
-        googleClientId: GOOGLE_CLIENT_ID ? '설정됨' : '설정 안됨',
-        googleClientSecret: GOOGLE_CLIENT_SECRET ? '설정됨' : '설정 안됨',
-        callbackUrl: GOOGLE_CALLBACK_URL
-    });
-});
+/**
+ * 
+ * 생성된 유저 정보: {
+  id: '106453667950488074783',
+  email: 'jking120393@gmail.com',
+  name: '지은김',
+  picture: 'https://lh3.googleusercontent.com/a/ACg8ocJJXgfdUSxIMiodrADQgI_Ja1w75zKL1xoj93o8qiapj8rcXGw=s96-c',
+  walletAddress: '0x106453667950488074783',
+  provider: 'google'
+}
+Google OAuth 콜백: {
+  id: '106453667950488074783',
+  email: 'jking120393@gmail.com',
+  name: '지은김',
+  picture: 'https://lh3.googleusercontent.com/a/ACg8ocJJXgfdUSxIMiodrADQgI_Ja1w75zKL1xoj93o8qiapj8rcXGw=s96-c',
+  walletAddress: '0x106453667950488074783',
+  provider: 'google'
+}
+ * 
+ */
 
 app.listen(4000, (error) => {
-    console.log("server on")
-    console.log("error", error);
-})
+    if (error) {
+        console.error(error);
+    } else {
+        console.log("server on");
+    }
+});

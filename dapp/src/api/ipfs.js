@@ -8,7 +8,7 @@ export const uploadToIPFS = async (imageData) => {
             imageData : imageData
         });
 
-        console.log(responce.data);
+        console.log(responce.data.data);
         return responce.data;
     } catch (error) {
         console.log("IPFS 업로드 실패")
