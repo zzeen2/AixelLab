@@ -8,7 +8,6 @@ class Artwork extends Model {
             description: { type: DataTypes.TEXT, allowNull: true },
             image_ipfs_uri: { type: DataTypes.STRING(500), allowNull: false },
             metadata_ipfs_uri: { type: DataTypes.STRING(500), allowNull: false },
-            is_approved: { type: DataTypes.BOOLEAN, defaultValue: false },
             proposal_id: { type: DataTypes.STRING(100), allowNull: true },
             status: { type: DataTypes.ENUM('pending', 'reviewing', 'approved', 'rejected', 'voting', 'minted'), defaultValue: 'pending'},
             token_id: { type: DataTypes.INTEGER, allowNull: true },

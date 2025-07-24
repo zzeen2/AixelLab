@@ -76,39 +76,6 @@ passport.use(new GoogleStrategy({
     }
 }));
 
-// // Pinata 테스트
-// app.get('/test-pinata', async (req, res) => {
-//     try {
-//         console.log('Pinata API 키 확인:', PINATA_API_KEY ? '설정됨' : '설정되지 않음');
-        
-//         if (!PINATA_API_KEY) {
-//             return res.status(400).json({ 
-//                 error: 'Pinata API 키가 설정되지 않았습니다. .env 파일을 확인해주세요.' 
-//             });
-//         }
-
-//         // Pinata API 테스트 (사용자 정보 가져오기)
-//         const response = await axios.get('https://api.pinata.cloud/data/testAuthentication', {
-//             headers: {
-//                 'Authorization': `Bearer ${PINATA_JWT}`
-//             }
-//         });
-
-//         console.log('Pinata 연결 성공:', response.data);
-//         res.json({ 
-//             success: true, 
-//             message: 'Pinata 연결 성공!',
-//             data: response.data 
-//         });
-//     } catch (error) {
-//         console.error('Pinata 연결 실패:', error.response?.data || error.message);
-//         res.status(500).json({ 
-//             error: 'Pinata 연결 실패', 
-//             details: error.response?.data || error.message 
-//         });
-//     }
-// });
-
 // react에서 요청보내면 url 받아서 proxy 전달
 
 app.get('/proxy-image', async(req,res) => {
@@ -135,48 +102,110 @@ app.get('/proxy-image', async(req,res) => {
 
 // 이미지 업로드
 // todo 소셜로그인 구현하고 유저정보 메타데이터로 넣기
-app.post('/upload-to-ipfs', async(req,res) => {
-    try {
-        const {imageData} = req.body; // base64이미지 데이터
-        console.log("이미지 데이터: ", imageData)
-        if(!imageData) {
-            return res.status(400).json({ error : "이미지데이터가 없습니다." })
-        }
+// app.post('/upload-to-ipfs', async(req,res) => {
+//     try {
+//         const {imageData} = req.body; // base64이미지 데이터
+//         console.log("이미지 데이터: ", imageData)
+//         if(!imageData) {
+//             return res.status(400).json({ error : "이미지데이터가 없습니다." })
+//         }
         
-        // base64 to buffer 
-        // 메타데이터 제거
-        const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
-        const buffer = Buffer.from(base64Data, 'base64'); 
+//         // base64 to buffer 
+//         // 메타데이터 제거
+//         const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+//         const buffer = Buffer.from(base64Data, 'base64'); 
 
+//         const formData = new FormData();
+//         formData.append('file', buffer, {
+//             filename: `aixel-${Date.now()}.png`,
+//             contentType : 'image/png'
+//         })
+
+//         // 업로드
+//         const response = await axios.post("https://api.pinata.cloud/pinning/pinFileToIPFS", formData, {
+//             headers : {
+//                 'Authorization' : `Bearer ${PINATA_JWT}`,
+//                 ...formData.getHeaders()
+//             }
+//         })
+
+//         console.log("response data", response.data);
+//         const ipfsHash = response.data.IpfsHash;
+//         const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`
+
+//         res.json({
+//             success: true,
+//             ipfsHash: ipfsHash,
+//             ipfsUrl: ipfsUrl,
+//             message : "이미지 IPFS 업로드 완료"
+//         })
+//     } catch (error) {
+//         console.log(error);
+//         res.status(500).json({
+//             error:"IPFS 업로드 실패"
+//         })
+//     }
+// })
+
+
+app.post('artwork/submit', async (req,res) => {
+    // 데이터 확인
+    const {title, description, imageData } = req.body;
+    if(!title || !imageData) return res.status(400).json({error : "작품 제목과 이미지를 확인해주세요."});
+    
+    try {
+        // pinata에 이미지 업로드
+        const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+        const buffer = Buffer.from(base64Data, 'base64');
         const formData = new FormData();
         formData.append('file', buffer, {
             filename: `aixel-${Date.now()}.png`,
-            contentType : 'image/png'
-        })
-
-        // 업로드
+            contentType: 'image/png',
+        });
         const response = await axios.post("https://api.pinata.cloud/pinning/pinFileToIPFS", formData, {
             headers : {
                 'Authorization' : `Bearer ${PINATA_JWT}`,
                 ...formData.getHeaders()
             }
         })
-
-        console.log("response data", response.data);
         const ipfsHash = response.data.IpfsHash;
-        const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`
+        const ipfsUri = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`
 
-        res.json({
-            success: true,
-            ipfsHash: ipfsHash,
-            ipfsUrl: ipfsUrl,
-            message : "이미지 IPFS 업로드 완료"
+        // 메타데이터 업로드
+        const metadata = {
+            name :  title,
+            description: description || "No description",
+            image : ipfsUri
+        }
+        const metadataResponse = await axios.post(
+            'https://api.pinata.cloud/pinning/pinJSONToIPFS',
+            metadata,
+            { headers: { Authorization: `Bearer ${process.env.PINATA_JWT}` } }
+        )
+        const metadataIpfsUri = `https://gateway.pinata.cloud/ipfs/${metadataResponse.data.IpfsHash}`;
+
+        // db 저장
+        const artwork = await db.Artwork.create({
+            google_id_fk:req.user.id,
+            title,
+            description,
+            image_ipfs_uri : ipfsUri,
+            metadata_ipfs_uri : metadataIpfsUri,
+            status : 'pending'
         })
+
+        // 투표권
+        const user = await db.User.findOne({where:{google_id : req.user.id}});
+        if(!user.is_eligible_voter) {
+            await db.User.update(
+                { is_eligible_voter : true, vote_weight : 1},
+                { where : {google_id: req.user.id}}
+            )
+        }
+        res.json({success : true, artwork : {id : artwork.id, title, imageIpfsUri : ipfsUri}})
     } catch (error) {
         console.log(error);
-        res.status(500).json({
-            error:"IPFS 업로드 실패"
-        })
+        res.status(500).json({error : "작품제출 실패"})
     }
 })
 
@@ -188,8 +217,25 @@ app.get('/auth/google', passport.authenticate('google', {
 // Google 인증 후 콜백
 app.get('/auth/google/callback', 
     passport.authenticate('google', { failureRedirect: 'http://localhost:3000/login' }),
-    (req, res) => {
-        console.log('Google OAuth 콜백:', req.user);
+    async (req, res) => {
+        // console.log('Google OAuth 콜백:', req.user);
+
+        // db에 사용자 업데이트
+        try {
+            const existingUser = await db.User.findOne({
+                where : { google_id : req.user.id}
+            })
+
+            if(existingUser) {
+                await existingUser.update({
+                    email : req.user.emails[0].value,
+                    display_name : req.user.displayName,
+                    wallet_address: `0x${req.user.id.slice(0, 40)}` //todo 수정
+                })
+            }
+        } catch (error) {
+            
+        }
         res.redirect('http://localhost:3000/');
     }
 );
