@@ -148,8 +148,9 @@ app.get('/proxy-image', async(req,res) => {
 // })
 
 
-app.post('artwork/submit', async (req,res) => {
+app.post('/artwork/submit', async (req,res) => {
     // 데이터 확인
+    console.log("req.user", req.user)
     const {title, description, imageData } = req.body;
     if(!title || !imageData) return res.status(400).json({error : "작품 제목과 이미지를 확인해주세요."});
     
@@ -183,7 +184,6 @@ app.post('artwork/submit', async (req,res) => {
             { headers: { Authorization: `Bearer ${process.env.PINATA_JWT}` } }
         )
         const metadataIpfsUri = `https://gateway.pinata.cloud/ipfs/${metadataResponse.data.IpfsHash}`;
-
         // db 저장
         const artwork = await db.Artwork.create({
             google_id_fk:req.user.id,
@@ -218,40 +218,64 @@ app.get('/auth/google', passport.authenticate('google', {
 app.get('/auth/google/callback', 
     passport.authenticate('google', { failureRedirect: 'http://localhost:3000/login' }),
     async (req, res) => {
-        // console.log('Google OAuth 콜백:', req.user);
-
-        // db에 사용자 업데이트
         try {
-            const existingUser = await db.User.findOne({
-                where : { google_id : req.user.id}
-            })
-
-            if(existingUser) {
-                await existingUser.update({
-                    email : req.user.emails[0].value,
-                    display_name : req.user.displayName,
-                    wallet_address: `0x${req.user.id.slice(0, 40)}` //todo 수정
-                })
-            }
-        } catch (error) {
+            console.log('Google OAuth 콜백:', req.user);
             
+            // DB에 사용자 저장/업데이트
+            const [user, created] = await db.User.findOrCreate({
+                where: { google_id: req.user.id },
+                defaults: {
+                    email: req.user.email,
+                    display_name: req.user.name,
+                    wallet_address: req.user.walletAddress,
+                    is_eligible_voter: true,
+                    vote_weight: 0
+                }
+            });
+            
+            if (!created) {
+                await user.update({
+                    email: req.user.email,
+                    display_name: req.user.name,
+                    wallet_address: req.user.walletAddress
+                });
+            }
+            
+            console.log('db에 사용자 저장', user.google_id);
+            res.redirect('http://localhost:3000/');
+        } catch (error) {
+            console.error(error);
+            res.redirect('http://localhost:3000/login');
         }
-        res.redirect('http://localhost:3000/');
     }
 );
 
 // 현재 로그인된 유저 정보
-app.get('/auth/user', (req, res) => {
-    if (req.isAuthenticated()) {
-        res.json({
-            success: true,
-            user: req.user
-        });
-    } else {
-        res.json({
-            success: false,
-            user: null
-        });
+app.get('/auth/user', async (req, res) => {
+    try {
+        if (req.isAuthenticated()) {
+            const user = await db.User.findOne({
+                where: { google_id: req.user.id }
+            });
+            if (user) {
+                return res.json({
+                    success: true,
+                    user: {
+                        google_id: user.google_id,
+                        email: user.email,
+                        display_name: user.display_name,
+                        wallet_address: user.wallet_address,
+                        is_eligible_voter: user.is_eligible_voter,
+                        vote_weight: user.vote_weight,
+                        picture: req.user.picture
+                    }
+                });
+            }
+        }
+        return res.json({ success: false, user: null });
+    } catch (error) {
+        console.error('사용자 조회 실패:', error);
+        return res.status(500).json({ success: false, message: '사용자 조회 실패' });
     }
 });
 

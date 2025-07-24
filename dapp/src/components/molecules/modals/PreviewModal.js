@@ -220,17 +220,14 @@ const PreviewModal = ({ isOpen, imageUrl, onClose }) => {
 
     const handleUploadToIPFS = async () => {
         try {
+            if (!title) {
+                setUploadStatus("Please enter your artwork's title.");
+                return;
+            }
             setIsUploading(true);
             setUploadStatus('Uploading...');
             
-            // 제목과 설명을 메타데이터로 포함
-            const metadata = {
-                title: title,
-                description: description,
-                createdAt: new Date().toISOString()
-            };
-            
-            const result = await uploadToIPFS(imageUrl, metadata);
+            const result = await uploadToIPFS(imageUrl, title, description);
             
             setTimeout(() => {
                 onClose();

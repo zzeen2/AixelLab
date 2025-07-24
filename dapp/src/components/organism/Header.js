@@ -3,6 +3,7 @@ import styled from "styled-components";
 import { NetworkInfo, WalletInfo} from "../atoms";
 import { SearchBar } from "../molecules";
 import { useNavigate } from 'react-router-dom';
+import { getCurrentUser } from '../../api/auth';
 
 const HeaderContainer = styled.div`
     display: flex;
@@ -82,11 +83,25 @@ const Header = () => {
 
     // 유저 정보 가져오기
     useEffect(() => {
-        const user = localStorage.getItem('userInfo');
-        if(user) {
-            setUserInfo(JSON.parse(user))
-        }
-    }, [])
+        const fetchUserInfo = async () => {
+            const user = localStorage.getItem('userInfo');
+            if(user) {
+                setUserInfo(JSON.parse(user));
+            } else {
+                try {
+                    const data = await getCurrentUser();
+                    if (data.success && data.user) {
+                        localStorage.setItem('userInfo', JSON.stringify(data.user));
+                        setUserInfo(data.user);
+                    }
+                } catch (error) {
+                    console.error('사용자 정보 조회 실패:', error);
+                }
+            }
+        };
+        
+        fetchUserInfo();
+    }, []);
 
     // localStorage 변경 감지
     useEffect(() => {
