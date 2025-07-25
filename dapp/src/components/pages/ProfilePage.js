@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { MainTemplate } from '../templates';
+import { getUserArtworks, getUserStats } from '../../api/user';
 
 const PageContainer = styled.div`
     padding: 24px;
@@ -176,6 +177,10 @@ const NFTMeta = styled.div`
 
 const ProfilePage = () => {
     const [activeTab, setActiveTab] = useState('creations');
+    const [userInfo, setUserInfo] = useState(null);
+    const [artworks, setArtworks] = useState([]);
+    const [stats, setStats] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     const tabs = [
         { id: 'creations', label: 'My Creations'},
@@ -184,61 +189,78 @@ const ProfilePage = () => {
         { id: 'favorites', label: 'Favorites' }
     ];
 
-    // todo
-    const mockStats = {
-        totalCreations: 25,
-        mintedNFTs: 8,
-        votingNFTs: 3,
-        totalEarnings: '2.5 ETH',
-        followers: 1200,
-        likes: 5600
+    // 데이터 로딩
+    const loadUserData = async () => {
+        try {
+            setLoading(true);
+            
+            // 사용자 정보
+            const userInfo = localStorage.getItem('userInfo');
+            if (userInfo) {
+                setUserInfo(JSON.parse(userInfo));
+            } else {
+                return;
+            }
+            
+            // 작품 목록
+            const artworksResponse = await getUserArtworks();
+            if (artworksResponse.success) {
+                setArtworks(artworksResponse.artworks);
+            }
+            
+            // 통계
+            const statsResponse = await getUserStats();
+            if (statsResponse.success) {
+                setStats(statsResponse.stats);
+            }
+            
+        } catch (error) {
+            console.error('데이터 로딩 실패:', error);
+        } finally {
+            setLoading(false);
+        }
     };
-    //todo
-    const mockNFTs = [
-        { id: 1, title: 'Pixel Cat #1', status: 'Minted', price: '0.1 ETH' },
-        { id: 2, title: 'AI Dragon', status: 'Voting', price: null },
-        { id: 3, title: 'Retro Game', status: 'Draft', price: null },
-        { id: 4, title: 'Pixel Landscape', status: 'Minted', price: '0.05 ETH' }
-    ];
+
+    useEffect(() => {
+        loadUserData();
+    }, []);
 
     return (
         <MainTemplate>
             <PageContainer>
                 <ProfileHeader>
-                    <ProfileInfo>
-                        <Avatar></Avatar>
-                        <UserInfo>
-                            <Username>PixelArtist123</Username>
-                            <UserHandle>@pixelartist123</UserHandle>
-                        </UserInfo>
-                    </ProfileInfo>
+                    {userInfo && (
+                        <ProfileInfo>
+                            <Avatar>
+                                <img 
+                                    src={userInfo.picture} 
+                                    alt="Profile" 
+                                    style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                                />
+                            </Avatar>
+                            <UserInfo>
+                                <Username>{userInfo.display_name}</Username>
+                                <UserHandle>{userInfo.email}</UserHandle>
+                            </UserInfo>
+                        </ProfileInfo>
+                    )}
                     
-                    <StatsGrid>
-                        <StatCard>
-                            <StatNumber>{mockStats.totalCreations}</StatNumber>
-                            <StatLabel>Total Creations</StatLabel>
-                        </StatCard>
-                        <StatCard>
-                            <StatNumber>{mockStats.mintedNFTs}</StatNumber>
-                            <StatLabel>Minted NFTs</StatLabel>
-                        </StatCard>
-                        <StatCard>
-                            <StatNumber>{mockStats.votingNFTs}</StatNumber>
-                            <StatLabel>Voting Now</StatLabel>
-                        </StatCard>
-                        <StatCard>
-                            <StatNumber>{mockStats.totalEarnings}</StatNumber>
-                            <StatLabel>Total Earnings</StatLabel>
-                        </StatCard>
-                        <StatCard>
-                            <StatNumber>{mockStats.followers}</StatNumber>
-                            <StatLabel>Followers</StatLabel>
-                        </StatCard>
-                        <StatCard>
-                            <StatNumber>{mockStats.likes}</StatNumber>
-                            <StatLabel>Likes Received</StatLabel>
-                        </StatCard>
-                    </StatsGrid>
+                    {stats && (
+                        <StatsGrid>
+                            <StatCard>
+                                <StatNumber>{stats.total_artworks}</StatNumber>
+                                <StatLabel>Total Artworks</StatLabel>
+                            </StatCard>
+                            <StatCard>
+                                <StatNumber>{stats.approved_artworks}</StatNumber>
+                                <StatLabel>Approved</StatLabel>
+                            </StatCard>
+                            <StatCard>
+                                <StatNumber>{stats.vote_weight}</StatNumber>
+                                <StatLabel>Vote Weight</StatLabel>
+                            </StatCard>
+                        </StatsGrid>
+                    )}
                 </ProfileHeader>
 
                 <TabContainer>
@@ -255,20 +277,32 @@ const ProfilePage = () => {
                     </TabNavigation>
                     
                     <TabContent>
-                        <GalleryGrid>
-                            {mockNFTs.map(nft => (
-                                <NFTCard key={nft.id}>
-                                    <NFTImage></NFTImage>
-                                    <NFTInfo>
-                                        <NFTTitle>{nft.title}</NFTTitle>
-                                        <NFTMeta>
-                                            <span>{nft.status}</span>
-                                            {nft.price && <span>{nft.price}</span>}
-                                        </NFTMeta>
-                                    </NFTInfo>
-                                </NFTCard>
-                            ))}
-                        </GalleryGrid>
+                        {loading ? (
+                            <div style={{ padding: '40px', textAlign: 'center', color: '#8b949e' }}>
+                                Loading...
+                            </div>
+                        ) : (
+                            <GalleryGrid>
+                                {artworks.map(artwork => (
+                                    <NFTCard key={artwork.id}>
+                                        <NFTImage>
+                                            <img 
+                                                src={artwork.image_ipfs_uri} 
+                                                alt={artwork.title}
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            />
+                                        </NFTImage>
+                                        <NFTInfo>
+                                            <NFTTitle>{artwork.title}</NFTTitle>
+                                            <NFTMeta>
+                                                <span>{artwork.status}</span>
+                                                <span>{artwork.description}</span>
+                                            </NFTMeta>
+                                        </NFTInfo>
+                                    </NFTCard>
+                                ))}
+                            </GalleryGrid>
+                        )}
                     </TabContent>
                 </TabContainer>
             </PageContainer>

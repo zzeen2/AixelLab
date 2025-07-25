@@ -1,11 +1,12 @@
+import axios from 'axios';
+
 // 현재 로그인된 사용자 정보 조회
 export const getCurrentUser = async () => {
     try {
-        const response = await fetch(`http://localhost:4000/auth/user`, {
-            credentials: 'include'
+        const response = await axios.get(`http://localhost:4000/auth/user`, {
+            withCredentials: true
         });
-        const data = await response.json();
-        return data;
+        return response.data;
     } catch (error) {
         console.error('사용자 정보 조회 실패:', error);
         throw new Error('사용자 정보 조회 실패');
@@ -15,11 +16,10 @@ export const getCurrentUser = async () => {
 // 로그아웃
 export const logout = async () => {
     try {
-        const response = await fetch(`http://localhost:4000/auth/logout`, {
-            credentials: 'include'
+        const response = await axios.get(`http://localhost:4000/auth/logout`, {
+            withCredentials: true
         });
-        const data = await response.json();
-        return data;
+        return response.data;
     } catch (error) {
         console.error('로그아웃 실패:', error);
         throw new Error('로그아웃 실패');

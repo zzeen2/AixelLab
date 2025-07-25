@@ -1,23 +1,15 @@
 const express = require("express");
-const axios = require('axios');
 const app = express();
 const cors = require('cors');
-const FormData = require('form-data');
+const session = require('express-session');
 const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-session = require('express-session');
 require('dotenv').config();
-const db = require('./models');
 
-// pinata
-const PINATA_API_KEY = process.env.PINATA_API_KEY;
-const PINATA_SECRET_API_KEY = process.env.PINATA_SECRET_API_KEY;
-const PINATA_JWT = process.env.PINATA_JWT;
-// google
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL;
+// 환경변수
 const SESSION_SECRET = process.env.SESSION_SECRET;
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 app.use(cors({
     origin: 'http://localhost:3000',
@@ -26,289 +18,27 @@ app.use(cors({
 
 app.use(session({
     secret: SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: { secure: false }
+    resave: true,
+    saveUninitialized: true,
+    cookie: { 
+        secure: false, 
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000 
+    }
 }));
 
+// Passport 설정
+require('./config/passport');
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
-
-//passport 설정
-// 사용자 직렬화
-passport.serializeUser((user, done) => {
-    done(null, user);
-});
-
-passport.deserializeUser((user, done) => {
-    done(null, user);
-});
-
-// Google Strategy 설정
-passport.use(new GoogleStrategy({
-    clientID: GOOGLE_CLIENT_ID,
-    clientSecret: GOOGLE_CLIENT_SECRET,
-    callbackURL: GOOGLE_CALLBACK_URL
-}, async (accessToken, refreshToken, profile, done) => {
-    try {
-        console.log('Google 프로필 정보:', profile);
-        
-        // 계정 추상화 지갑 주소
-        const walletAddress = `0x${profile.id.slice(0, 40)}`;
-        
-        const user = {
-            id: profile.id,
-            email: profile.emails[0].value,
-            name: profile.displayName,
-            picture: profile.photos[0].value,
-            walletAddress: walletAddress,
-            provider: 'google'
-        };
-        
-        console.log('생성된 유저 정보:', user);
-        return done(null, user);
-    } catch (error) {
-        console.error('Google Strategy 에러:', error);
-        return done(error, null);
-    }
-}));
-
-// react에서 요청보내면 url 받아서 proxy 전달
-
-app.get('/proxy-image', async(req,res) => {
-    const {url} = req.query;
-    console.log("url : ", url)
-    if(!url) return res.json({state : 500, message : "이미지가 없습니다."})
-
-    try {
-        const response = await axios.get(url, {
-            responseType : 'arraybuffer' // arraybuffer : 이미지 데이터를 binary형태로 
-        });
-        //console.log("response:", response)
-        const contentType = response.headers['content-type'];
-        res.set('Content-Type', contentType ||'image/png');
-        res.send(response.data);
-    } catch (error) {
-        console.log("이미지 에러")
-        console.log(error)
-        // console.log("status", error.response.status);
-        // console.log("deaders:", error.response.headers);
-        // console.log("data:", error.response.data);
-    }
-})
-
-// 이미지 업로드
-// todo 소셜로그인 구현하고 유저정보 메타데이터로 넣기
-// app.post('/upload-to-ipfs', async(req,res) => {
-//     try {
-//         const {imageData} = req.body; // base64이미지 데이터
-//         console.log("이미지 데이터: ", imageData)
-//         if(!imageData) {
-//             return res.status(400).json({ error : "이미지데이터가 없습니다." })
-//         }
-        
-//         // base64 to buffer 
-//         // 메타데이터 제거
-//         const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
-//         const buffer = Buffer.from(base64Data, 'base64'); 
-
-//         const formData = new FormData();
-//         formData.append('file', buffer, {
-//             filename: `aixel-${Date.now()}.png`,
-//             contentType : 'image/png'
-//         })
-
-//         // 업로드
-//         const response = await axios.post("https://api.pinata.cloud/pinning/pinFileToIPFS", formData, {
-//             headers : {
-//                 'Authorization' : `Bearer ${PINATA_JWT}`,
-//                 ...formData.getHeaders()
-//             }
-//         })
-
-//         console.log("response data", response.data);
-//         const ipfsHash = response.data.IpfsHash;
-//         const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`
-
-//         res.json({
-//             success: true,
-//             ipfsHash: ipfsHash,
-//             ipfsUrl: ipfsUrl,
-//             message : "이미지 IPFS 업로드 완료"
-//         })
-//     } catch (error) {
-//         console.log(error);
-//         res.status(500).json({
-//             error:"IPFS 업로드 실패"
-//         })
-//     }
-// })
+// 라우터 설정
+app.use('/auth', require('./routes/auth'));
+app.use('/artwork', require('./routes/artwork'));
+app.use('/proxy-image', require('./routes/proxy'));
 
 
-app.post('/artwork/submit', async (req,res) => {
-    // 데이터 확인
-    console.log("req.user", req.user)
-    const {title, description, imageData } = req.body;
-    if(!title || !imageData) return res.status(400).json({error : "작품 제목과 이미지를 확인해주세요."});
-    
-    try {
-        // pinata에 이미지 업로드
-        const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
-        const buffer = Buffer.from(base64Data, 'base64');
-        const formData = new FormData();
-        formData.append('file', buffer, {
-            filename: `aixel-${Date.now()}.png`,
-            contentType: 'image/png',
-        });
-        const response = await axios.post("https://api.pinata.cloud/pinning/pinFileToIPFS", formData, {
-            headers : {
-                'Authorization' : `Bearer ${PINATA_JWT}`,
-                ...formData.getHeaders()
-            }
-        })
-        const ipfsHash = response.data.IpfsHash;
-        const ipfsUri = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`
-
-        // 메타데이터 업로드
-        const metadata = {
-            name :  title,
-            description: description || "No description",
-            image : ipfsUri
-        }
-        const metadataResponse = await axios.post(
-            'https://api.pinata.cloud/pinning/pinJSONToIPFS',
-            metadata,
-            { headers: { Authorization: `Bearer ${process.env.PINATA_JWT}` } }
-        )
-        const metadataIpfsUri = `https://gateway.pinata.cloud/ipfs/${metadataResponse.data.IpfsHash}`;
-        // db 저장
-        const artwork = await db.Artwork.create({
-            google_id_fk:req.user.id,
-            title,
-            description,
-            image_ipfs_uri : ipfsUri,
-            metadata_ipfs_uri : metadataIpfsUri,
-            status : 'pending'
-        })
-
-        // 투표권
-        const user = await db.User.findOne({where:{google_id : req.user.id}});
-        if(!user.is_eligible_voter) {
-            await db.User.update(
-                { is_eligible_voter : true, vote_weight : 1},
-                { where : {google_id: req.user.id}}
-            )
-        }
-        res.json({success : true, artwork : {id : artwork.id, title, imageIpfsUri : ipfsUri}})
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({error : "작품제출 실패"})
-    }
-})
-
-// Google 로그인
-app.get('/auth/google', passport.authenticate('google', {
-    scope: ['profile', 'email']
-}));
-
-// Google 인증 후 콜백
-app.get('/auth/google/callback', 
-    passport.authenticate('google', { failureRedirect: 'http://localhost:3000/login' }),
-    async (req, res) => {
-        try {
-            console.log('Google OAuth 콜백:', req.user);
-            
-            // DB에 사용자 저장/업데이트
-            const [user, created] = await db.User.findOrCreate({
-                where: { google_id: req.user.id },
-                defaults: {
-                    email: req.user.email,
-                    display_name: req.user.name,
-                    wallet_address: req.user.walletAddress,
-                    is_eligible_voter: true,
-                    vote_weight: 0
-                }
-            });
-            
-            if (!created) {
-                await user.update({
-                    email: req.user.email,
-                    display_name: req.user.name,
-                    wallet_address: req.user.walletAddress
-                });
-            }
-            
-            console.log('db에 사용자 저장', user.google_id);
-            res.redirect('http://localhost:3000/');
-        } catch (error) {
-            console.error(error);
-            res.redirect('http://localhost:3000/login');
-        }
-    }
-);
-
-// 현재 로그인된 유저 정보
-app.get('/auth/user', async (req, res) => {
-    try {
-        if (req.isAuthenticated()) {
-            const user = await db.User.findOne({
-                where: { google_id: req.user.id }
-            });
-            if (user) {
-                return res.json({
-                    success: true,
-                    user: {
-                        google_id: user.google_id,
-                        email: user.email,
-                        display_name: user.display_name,
-                        wallet_address: user.wallet_address,
-                        is_eligible_voter: user.is_eligible_voter,
-                        vote_weight: user.vote_weight,
-                        picture: req.user.picture
-                    }
-                });
-            }
-        }
-        return res.json({ success: false, user: null });
-    } catch (error) {
-        console.error('사용자 조회 실패:', error);
-        return res.status(500).json({ success: false, message: '사용자 조회 실패' });
-    }
-});
-
-// 로그아웃
-app.get('/auth/logout', (req, res) => {
-    req.logout((err) => {
-        if (err) {
-            return res.status(500).json({ error: '로그아웃 실패' });
-        }
-        res.json({ success: true, message: '로그아웃 완료' });
-    });
-});
-
-/**
- * 
- * 생성된 유저 정보: {
-  id: '106453667950488074783',
-  email: 'jking120393@gmail.com',
-  name: '지은김',
-  picture: 'https://lh3.googleusercontent.com/a/ACg8ocJJXgfdUSxIMiodrADQgI_Ja1w75zKL1xoj93o8qiapj8rcXGw=s96-c',
-  walletAddress: '0x106453667950488074783',
-  provider: 'google'
-}
-Google OAuth 콜백: {
-  id: '106453667950488074783',
-  email: 'jking120393@gmail.com',
-  name: '지은김',
-  picture: 'https://lh3.googleusercontent.com/a/ACg8ocJJXgfdUSxIMiodrADQgI_Ja1w75zKL1xoj93o8qiapj8rcXGw=s96-c',
-  walletAddress: '0x106453667950488074783',
-  provider: 'google'
-}
- * 
- */
 
 app.listen(4000, (error) => {
     if (error) {

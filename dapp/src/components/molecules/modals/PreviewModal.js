@@ -224,6 +224,15 @@ const PreviewModal = ({ isOpen, imageUrl, onClose }) => {
                 setUploadStatus("Please enter your artwork's title.");
                 return;
             }
+            
+            // 로그인 상태 확인
+            const userInfo = localStorage.getItem('userInfo');
+            console.log('userInfo:', userInfo);
+            if (!userInfo) {
+                setUploadStatus('Please login first.');
+                return;
+            }
+            
             setIsUploading(true);
             setUploadStatus('Uploading...');
             

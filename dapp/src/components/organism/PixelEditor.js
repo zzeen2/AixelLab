@@ -185,41 +185,42 @@ const PixelEditor = ({ draftImageUrl }) => {
         img.src = proxiedUrl;
 
         img.onload = () => {
-        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-        ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
-        
-        // 이미지 색상 추출
-        const imageData = ctx.getImageData(0, 0, canvasWidth, canvasHeight).data;
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+            
+            // 이미지 색상 추출
+            const imageData = ctx.getImageData(0, 0, canvasWidth, canvasHeight).data;
 
-        const newGridColors = [];
+            const newGridColors = [];
 
-        for (let y = 0; y < rows; y++) {
-            const row = [];
-            for (let x = 0; x < cols; x++) {
-            const px = x * pixelSize; 
-            const py = y * pixelSize; 
-            const i = (py * canvasWidth + px) * 4; 
+            for (let y = 0; y < rows; y++) {
+                const row = [];
+                for (let x = 0; x < cols; x++) {
+                    const px = x * pixelSize; 
+                    const py = y * pixelSize; 
+                    const i = (py * canvasWidth + px) * 4; 
 
-            const r = imageData[i];
-            const g = imageData[i + 1];
-            const b = imageData[i + 2];
-            const a = imageData[i + 3];
+                    const r = imageData[i];
+                    const g = imageData[i + 1];
+                    const b = imageData[i + 2];
+                    const a = imageData[i + 3];
 
-            if (a === 0) {
-                    row.push("#ffffff");
-                } else {
-                    row.push(rgbToHex(r, g, b));
+                    if (a === 0) {
+                        row.push("#ffffff");
+                    } else {
+                        row.push(rgbToHex(r, g, b));
+                    }
                 }
+                newGridColors.push(row);
             }
-            newGridColors.push(row);
-        }
 
-        setGridColors(newGridColors);
-        console.log("newGridColors");
+            setGridColors(newGridColors);
         };
-        // 이미지 로딩 디버깅
+        
+        // 이미지 로딩 실패 시 빈 그리드로 초기화
         img.onerror = (err) => {
-            console.log(err);
+            console.error('이미지 로딩 실패:', err);
+            initializeEmptyGrid();
         };
     };
 
