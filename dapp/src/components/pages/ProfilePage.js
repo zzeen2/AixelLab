@@ -54,38 +54,43 @@ const Username = styled.h1`
 const UserHandle = styled.p`
     font-size: 14px;
     color: #8b949e;
-    margin: 0 0 8px 0;
+    margin: 0 0 4px 0;
+`;
+
+const WalletAddress = styled.p`
+    font-size: 12px;
+    color: #6b7280;
+    margin: 0;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 `;
 
 
 
 const StatsGrid = styled.div`
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 12px;
-    margin-top: 16px;
+    display: flex;
+    gap: 48px;
+    margin-top: 24px;
+    align-items: center;
 `;
 
-const StatCard = styled.div`
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 8px;
-    padding: 16px;
-    text-align: center;
-    border: 1px solid #2a2a2a;
+const StatItem = styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
 `;
 
 const StatNumber = styled.div`
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 600;
     color: #ffffff;
     margin-bottom: 4px;
+    line-height: 1;
 `;
 
 const StatLabel = styled.div`
-    font-size: 12px;
+    font-size: 14px;
     color: #8b949e;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-weight: 500;
 `;
 
 const TabContainer = styled.div`
@@ -241,24 +246,25 @@ const ProfilePage = () => {
                             <UserInfo>
                                 <Username>{userInfo.display_name}</Username>
                                 <UserHandle>{userInfo.email}</UserHandle>
+                                <WalletAddress>{userInfo.wallet_address}</WalletAddress>
                             </UserInfo>
                         </ProfileInfo>
                     )}
                     
                     {stats && (
                         <StatsGrid>
-                            <StatCard>
+                            <StatItem>
                                 <StatNumber>{stats.total_artworks}</StatNumber>
                                 <StatLabel>Total Artworks</StatLabel>
-                            </StatCard>
-                            <StatCard>
+                            </StatItem>
+                            <StatItem>
                                 <StatNumber>{stats.approved_artworks}</StatNumber>
                                 <StatLabel>Approved</StatLabel>
-                            </StatCard>
-                            <StatCard>
+                            </StatItem>
+                            <StatItem>
                                 <StatNumber>{stats.vote_weight}</StatNumber>
                                 <StatLabel>Vote Weight</StatLabel>
-                            </StatCard>
+                            </StatItem>
                         </StatsGrid>
                     )}
                 </ProfileHeader>

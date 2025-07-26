@@ -75,35 +75,40 @@ const SidebarContainer = styled.div`
     height: 100%;
     padding: 0;
     color: #ffffff;
-    width: ${props => props.isExpanded ? '200px' : '60px'};
-    transition: width 0.3s ease;
+    width: ${props => props.isExpanded ? '240px' : '64px'};
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
     position: relative;
+    background: #0d1017;
+    border-right: 1px solid #2a2a2a;
 `;
 
 
 
 const Navigation = styled.nav`
-    padding: 0 20px;
-    min-width: 200px;
+    padding: 0 16px;
+    min-width: 240px;
     margin-top: 52px;
 `;
 
 const NavItem = styled.div`
     display: flex;
     align-items: center;
-    padding: 12px 0;
+    padding: 12px 8px;
     color: ${props => props.active ? '#ffffff' : '#8b949e'};
     font-size: 14px;
     font-weight: ${props => props.active ? '600' : '400'};
     cursor: pointer;
-    transition: color 0.2s ease;
+    transition: all 0.2s ease;
     gap: 12px;
     white-space: nowrap;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    border-radius: 8px;
+    margin: 2px 0;
 
     &:hover {
         color: #ffffff;
+        background: rgba(139, 92, 246, 0.1);
     }
 `;
 
@@ -119,7 +124,8 @@ const NavIcon = styled.div`
 
 const NavText = styled.span`
     opacity: ${props => props.isExpanded ? '1' : '0'};
-    transition: opacity 0.3s ease;
+    transform: ${props => props.isExpanded ? 'translateX(0)' : 'translateX(-10px)'};
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     white-space: nowrap;
     overflow: hidden;
 `;
@@ -127,8 +133,8 @@ const NavText = styled.span`
 const Divider = styled.div`
     height: 1px;
     background-color: #2a2a2a;
-    margin: 8px 0;
-    min-width: 200px;
+    margin: 16px 8px;
+    min-width: 240px;
 `;
 
 const Sidebar = ({ isExpanded }) => {
