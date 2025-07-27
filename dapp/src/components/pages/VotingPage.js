@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import MainTemplate from '../templates/MainTemplate';
 
@@ -140,6 +141,7 @@ const EmptyDescription = styled.p`
 `;
 
 const VotingPage = () => {
+  const navigate = useNavigate();
   const [votes, setVotes] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -201,8 +203,7 @@ const VotingPage = () => {
   };
 
   const handleVoteClick = (voteId) => {
-    // TODO: 투표 상세 페이지로 이동
-    console.log('투표 클릭:', voteId);
+    navigate(`/voting/${voteId}`);
   };
 
   if (loading) {

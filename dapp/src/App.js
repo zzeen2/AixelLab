@@ -7,6 +7,7 @@ import BlankCanvasPage from './components/pages/BlankCanvasPage';
 import ProfilePage from './components/pages/ProfilePage';
 import LoginPage from './components/pages/LoginPage';
 import VotingPage from './components/pages/VotingPage';
+import VoteDetailPage from './components/pages/VoteDetailPage';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/voting" element={<VotingPage />} />
+        <Route path="/voting/:id" element={<VoteDetailPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
