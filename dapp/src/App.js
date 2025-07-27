@@ -6,6 +6,7 @@ import AIDraftPage from './components/pages/AIDraftPage';
 import BlankCanvasPage from './components/pages/BlankCanvasPage';
 import ProfilePage from './components/pages/ProfilePage';
 import LoginPage from './components/pages/LoginPage';
+import VotingPage from './components/pages/VotingPage';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/ai-draft" element={<AIDraftPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/voting" element={<VotingPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

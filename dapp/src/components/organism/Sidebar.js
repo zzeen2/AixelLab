@@ -3,7 +3,6 @@ import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import { CreateArtworkModal } from "../molecules";
 
-// SVG Icons - Simplified
 const DiscoverIcon = () => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
         <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>
@@ -68,6 +67,15 @@ const SupportIcon = () => (
         <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/>
         <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke="currentColor" strokeWidth="2" fill="none"/>
         <line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" strokeWidth="2"/>
+    </svg>
+);
+
+const VotingIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2" fill="none"/>
+        <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" stroke="currentColor" strokeWidth="2" fill="none"/>
+        <path d="M12 3v6" stroke="currentColor" strokeWidth="2" fill="none"/>
+        <path d="M12 15v6" stroke="currentColor" strokeWidth="2" fill="none"/>
     </svg>
 );
 
@@ -193,6 +201,12 @@ const Sidebar = ({ isExpanded }) => {
                             <StudioIcon />
                         </NavIcon>
                         <NavText isExpanded={isExpanded}>Studio</NavText>
+                    </NavItem>
+                    <NavItem onClick={() => navigate('/voting')}>
+                        <NavIcon>
+                            <VotingIcon />
+                        </NavIcon>
+                        <NavText isExpanded={isExpanded}>Voting</NavText>
                     </NavItem>
                     <NavItem onClick={() => navigate('/profile')}>
                         <NavIcon>
