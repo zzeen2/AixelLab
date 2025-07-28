@@ -44,26 +44,26 @@ const UserInfo = styled.div`
     flex: 1;
 `;
 
-const Username = styled.h1`
-    font-size: 24px;
-    font-weight: 600;
-    margin: 0 0 4px 0;
-    color: #ffffff;
+const ProfileName = styled.h1`
+  font-size: 32px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 8px 0;
 `;
 
-const UserHandle = styled.p`
-    font-size: 14px;
-    color: #8b949e;
-    margin: 0 0 4px 0;
+const ProfileEmail = styled.p`
+  font-size: 16px;
+  color: #8b949e;
+  margin: 0 0 24px 0;
+  font-weight: 400;
 `;
 
-const WalletAddress = styled.p`
-    font-size: 12px;
-    color: #6b7280;
-    margin: 0;
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+const WalletAddress = styled.div`
+  font-size: 14px;
+  color: #8b949e;
+  font-weight: 400;
+  word-break: break-all;
 `;
-
 
 
 const StatsGrid = styled.div`
@@ -79,18 +79,30 @@ const StatItem = styled.div`
     align-items: flex-start;
 `;
 
-const StatNumber = styled.div`
-    font-size: 20px;
-    font-weight: 600;
-    color: #ffffff;
-    margin-bottom: 4px;
-    line-height: 1;
+const StatValue = styled.div`
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 4px;
+`;
+
+const StatDescription = styled.div`
+  font-size: 14px;
+  color: #8b949e;
+  font-weight: 400;
+`;
+
+const SectionTitle = styled.h2`
+  font-size: 24px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 16px 0;
 `;
 
 const StatLabel = styled.div`
-    font-size: 14px;
-    color: #8b949e;
-    font-weight: 500;
+  font-size: 14px;
+  color: #8b949e;
+  font-weight: 400;
 `;
 
 const TabContainer = styled.div`
@@ -106,20 +118,19 @@ const TabNavigation = styled.div`
 `;
 
 const TabButton = styled.button`
-    background: none;
-    border: none;
-    color: ${props => props.active ? '#ffffff' : '#8b949e'};
-    padding: 12px 20px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    border-bottom: 2px solid ${props => props.active ? '#8b5cf6' : 'transparent'};
-    transition: all 0.2s ease;
-    
-    &:hover {
-        color: #ffffff;
-        background: rgba(139, 92, 246, 0.1);
-    }
+  background: none;
+  border: none;
+  color: ${props => props.active ? '#8b5cf6' : '#8b949e'};
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  border-bottom: 2px solid ${props => props.active ? '#8b5cf6' : 'transparent'};
+  transition: all 0.2s ease;
+  
+  &:hover {
+    color: #8b5cf6;
+  }
 `;
 
 const TabContent = styled.div`
@@ -136,18 +147,18 @@ const GalleryGrid = styled.div`
 `;
 
 const NFTCard = styled.div`
-    background: #1a1a1a;
-    border-radius: 12px;
-    border: 1px solid #2a2a2a;
-    overflow: hidden;
-    transition: all 0.2s ease;
-    cursor: pointer;
-    
-    &:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-        border-color: #8b5cf6;
-    }
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  
+  &:hover {
+    border-color: #8b5cf6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(139, 92, 246, 0.15);
+  }
 `;
 
 const NFTImage = styled.div`
@@ -165,19 +176,42 @@ const NFTInfo = styled.div`
     padding: 16px;
 `;
 
-const NFTTitle = styled.h3`
-    font-size: 14px;
-    font-weight: 500;
-    color: #ffffff;
-    margin: 0 0 6px 0;
+const ArtworkTitle = styled.h3`
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 8px 0;
 `;
 
-const NFTMeta = styled.div`
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 12px;
-    color: #8b949e;
+const ArtworkDescription = styled.p`
+  font-size: 14px;
+  color: #8b949e;
+  margin: 0;
+  font-weight: 400;
+`;
+
+const EmptyTitle = styled.h2`
+  font-size: 32px;
+  font-weight: 700;
+  color: #8b949e;
+  text-align: center;
+  margin: 0 0 16px 0;
+`;
+
+const EmptyDescription = styled.p`
+  font-size: 16px;
+  color: #8b949e;
+  text-align: center;
+  margin: 0;
+  font-weight: 400;
+`;
+
+const EmptySubtext = styled.p`
+  font-size: 14px;
+  color: #6b7280;
+  text-align: center;
+  margin: 8px 0 0 0;
+  font-weight: 400;
 `;
 
 const ProfilePage = () => {
@@ -244,8 +278,8 @@ const ProfilePage = () => {
                                 />
                             </Avatar>
                             <UserInfo>
-                                <Username>{userInfo.display_name}</Username>
-                                <UserHandle>{userInfo.email}</UserHandle>
+                                <ProfileName>{userInfo.display_name}</ProfileName>
+                                <ProfileEmail>{userInfo.email}</ProfileEmail>
                                 <WalletAddress>{userInfo.wallet_address}</WalletAddress>
                             </UserInfo>
                         </ProfileInfo>
@@ -254,16 +288,16 @@ const ProfilePage = () => {
                     {stats && (
                         <StatsGrid>
                             <StatItem>
-                                <StatNumber>{stats.total_artworks}</StatNumber>
-                                <StatLabel>Total Artworks</StatLabel>
+                                <StatValue>{stats.total_artworks}</StatValue>
+                                <StatDescription>Total Artworks</StatDescription>
                             </StatItem>
                             <StatItem>
-                                <StatNumber>{stats.approved_artworks}</StatNumber>
-                                <StatLabel>Approved</StatLabel>
+                                <StatValue>{stats.approved_artworks}</StatValue>
+                                <StatDescription>Approved</StatDescription>
                             </StatItem>
                             <StatItem>
-                                <StatNumber>{stats.vote_weight}</StatNumber>
-                                <StatLabel>Vote Weight</StatLabel>
+                                <StatValue>{stats.vote_weight}</StatValue>
+                                <StatDescription>Vote Weight</StatDescription>
                             </StatItem>
                         </StatsGrid>
                     )}
@@ -299,11 +333,8 @@ const ProfilePage = () => {
                                             />
                                         </NFTImage>
                                         <NFTInfo>
-                                            <NFTTitle>{artwork.title}</NFTTitle>
-                                            <NFTMeta>
-                                                <span>{artwork.status}</span>
-                                                <span>{artwork.description}</span>
-                                            </NFTMeta>
+                                            <ArtworkTitle>{artwork.title}</ArtworkTitle>
+                                            <ArtworkDescription>{artwork.description}</ArtworkDescription>
                                         </NFTInfo>
                                     </NFTCard>
                                 ))}

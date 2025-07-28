@@ -20,11 +20,17 @@ const HeaderSection = styled.div`
 `;
 
 const Title = styled.h1`
-    font-size: 28px;
-    font-weight: 700;
-    color: #ffffff;
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 16px 0;
+`;
+
+const Subtitle = styled.p`
+  font-size: 16px;
+  color: #8b949e;
+  margin: 0 0 32px 0;
+  font-weight: 400;
 `;
 
 const ModeBadge = styled.span`
@@ -49,6 +55,14 @@ const EditorContainer = styled.div`
     display: flex;
     flex-direction: column;
     overflow: auto;
+`;
+
+const ToolLabel = styled.div`
+  font-size: 12px;
+  color: #8b949e;
+  font-weight: 500;
+  text-align: center;
+  margin-top: 8px;
 `;
 
 const PixelEditorPage = ({ mode }) => {

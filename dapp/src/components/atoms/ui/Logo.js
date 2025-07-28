@@ -41,16 +41,13 @@ const LogoIcon = styled.div`
     }
 `;
 
-const LogoText = styled.div`
-    font-size: 18px;
-    font-weight: 600;
-    color: #ffffff;
-    margin-left: 12px;
-    opacity: ${props => props.isExpanded ? '1' : '0'};
-    transition: opacity 0.3s ease;
-    white-space: nowrap;
-    overflow: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+const LogoText = styled.span`
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  opacity: ${props => props.isExpanded ? 1 : 0};
+  transition: opacity 0.3s ease;
 `;
 
 const Logo = ({ isExpanded }) => {

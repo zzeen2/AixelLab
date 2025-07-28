@@ -41,71 +41,85 @@ const RightPanel = styled.div`
     min-height: 0;
 `;
 
-const PanelTitle = styled.h2`
-    font-size: 20px;
-    font-weight: 600;
-    color: #ffffff;
-    margin-bottom: 20px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+const Title = styled.h1`
+  font-size: 32px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 16px 0;
+`;
+
+const Subtitle = styled.p`
+  font-size: 16px;
+  color: #8b949e;
+  margin: 0 0 32px 0;
+  font-weight: 400;
+`;
+
+const SectionTitle = styled.h2`
+  font-size: 24px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 16px 0;
+`;
+
+const ToolTitle = styled.h3`
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 8px 0;
+`;
+
+const ToolDescription = styled.p`
+  font-size: 14px;
+  color: #8b949e;
+  margin: 0;
+  font-weight: 400;
 `;
 
 const PromptInput = styled.textarea`
-    width: 100%;
-    min-height: 120px;
-    max-height: 200px;
-    background-color: #0d1017;
-    border: 1px solid #2a2a2a;
-    border-radius: 8px;
-    padding: 16px;
-    color: #ffffff;
-    font-size: 14px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-    resize: vertical;
-    margin-bottom: 20px;
-    box-sizing: border-box;
-    overflow: hidden; /* 추가 */
-    
-    &::-webkit-scrollbar {
-        display: none;
-    }
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-    
-    &:focus {
-        outline: none;
-        border-color: #3b82f6;
-    }
-    
-    &::placeholder {
-        color: #8b949e;
-    }
+  width: 100%;
+  min-height: 120px;
+  padding: 16px;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 14px;
+  resize: vertical;
+  font-family: inherit;
+  transition: border-color 0.2s ease;
+  
+  &:focus {
+    outline: none;
+    border-color: #8b5cf6;
+  }
+  
+  &::placeholder {
+    color: #8b949e;
+  }
 `;
 
 
 const GenerateButton = styled.button`
-    width: 100%;
-    background-color: #8b5cf6;
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    padding: 16px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-    box-sizing: border-box;
-    
-    &:hover {
-        background-color: #7c3aed;
-        transform: translateY(-1px);
-    }
-    
-    &:disabled {
-        background-color: #6b7280;
-        cursor: not-allowed;
-        transform: none;
-    }
+  background: #8b5cf6;
+  color: #ffffff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    background: #7c3aed;
+    transform: translateY(-1px);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 `;
 
 const PreviewArea = styled.div`
@@ -136,28 +150,39 @@ const ActionButtons = styled.div`
 `;
 
 const ActionButton = styled.button`
-    flex: 1;
-    background-color: ${props => props.primary ? '#8b5cf6' : '#2a2a2a'};
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    padding: 12px 16px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-    
-    &:hover {
-        background-color: ${props => props.primary ? '#7c3aed' : '#3a3a3a'};
-        transform: translateY(-1px);
-    }
-    
-    &:disabled {
-        background-color: #6b7280;
-        cursor: not-allowed;
-        transform: none;
-    }
+  background: ${props => props.primary ? '#8b5cf6' : 'transparent'};
+  color: #ffffff;
+  border: 1px solid ${props => props.primary ? '#8b5cf6' : '#2a2a2a'};
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    background: ${props => props.primary ? '#7c3aed' : 'rgba(139, 92, 246, 0.1)'};
+    border-color: #8b5cf6;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const ButtonText = styled.span`
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+`;
+
+const LoadingText = styled.p`
+  font-size: 16px;
+  color: #8b949e;
+  text-align: center;
+  margin: 16px 0 0 0;
+  font-weight: 400;
 `;
 
 const AIDraftPage = () => {
@@ -204,7 +229,7 @@ const AIDraftPage = () => {
         <MainTemplate>
             <PageContainer>
                 <LeftPanel>
-                    <PanelTitle>AI Draft Generator</PanelTitle>
+                    <SectionTitle>AI Draft Generator</SectionTitle>
                     
                     <PromptInput
                         placeholder="Describe the pixel art you want to create... (e.g., 'A cute cat')"
@@ -221,7 +246,7 @@ const AIDraftPage = () => {
                 </LeftPanel>
                 
                 <RightPanel>
-                    <PanelTitle>Preview</PanelTitle>
+                    <SectionTitle>Preview</SectionTitle>
                     
                     <PreviewArea>
                         {isGenerating ? (

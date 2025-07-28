@@ -77,6 +77,24 @@ const QuestionMark = styled.div`
     color: #999;
 `;
 
+const NetworkText = styled.span`
+  font-size: 14px;
+  color: #8b949e;
+  font-weight: 400;
+`;
+
+const WalletText = styled.span`
+  font-size: 13px;
+  color: #8b949e;
+  font-weight: 400;
+`;
+
+const ProfileName = styled.span`
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+`;
+
 const Header = () => {
     const navigate = useNavigate();
     const [userInfo, setUserInfo] = useState(null);

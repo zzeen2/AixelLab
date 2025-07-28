@@ -91,24 +91,37 @@ const PreviewImage = styled.img`
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
 `;
 
-const FormTitle = styled.h2`
-    color: #ffffff;
-    font-size: 24px;
-    font-weight: 600;
-    margin: 0 0 24px 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+const ModalTitle = styled.h2`
+  font-size: 24px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 16px 0;
+`;
+
+const ModalSubtitle = styled.p`
+  font-size: 16px;
+  color: #8b949e;
+  margin: 0 0 24px 0;
+  font-weight: 400;
 `;
 
 const InputGroup = styled.div`
     margin-bottom: 20px;
 `;
 
-const Label = styled.label`
-    display: block;
-    color: #ffffff;
-    font-size: 14px;
-    font-weight: 500;
-    margin-bottom: 8px;
+const InputLabel = styled.label`
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 8px;
+  display: block;
+`;
+
+const InputDescription = styled.p`
+  font-size: 14px;
+  color: #8b949e;
+  margin: 8px 0 0 0;
+  font-weight: 400;
 `;
 
 const Input = styled.input`
@@ -159,44 +172,42 @@ const ButtonContainer = styled.div`
     margin-top: auto;
 `;
 
-const DownloadButton = styled.button`
-    background: #2a2a2a;
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    padding: 12px 24px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    
-    &:hover {
-        background: #3a3a3a;
-        transform: translateY(-1px);
-    }
+const SubmitButton = styled.button`
+  background: #8b5cf6;
+  color: #ffffff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    background: #7c3aed;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 `;
 
-const UploadButton = styled.button`
-    background: #10b981;
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    padding: 12px 24px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    
-    &:hover {
-        background: #059669;
-        transform: translateY(-1px);
-    }
-    
-    &:disabled {
-        background: #6b7280;
-        cursor: not-allowed;
-        transform: none;
-    }
+const CancelButton = styled.button`
+  background: transparent;
+  color: #8b949e;
+  border: 1px solid #2a2a2a;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    border-color: #8b5cf6;
+    color: #8b5cf6;
+  }
 `;
 
 const PreviewModal = ({ isOpen, imageUrl, onClose }) => {
@@ -264,10 +275,11 @@ const PreviewModal = ({ isOpen, imageUrl, onClose }) => {
                     
                     <RightSection>
                         <div>
-                            <FormTitle>Artwork preview</FormTitle>
+                            <ModalTitle>Artwork preview</ModalTitle>
+                            <ModalSubtitle>Please enter your artwork's details.</ModalSubtitle>
                             
                             <InputGroup>
-                                <Label>Title</Label>
+                                <InputLabel>Title</InputLabel>
                                 <Input
                                     type="text"
                                     placeholder="Enter artwork title"
@@ -278,25 +290,28 @@ const PreviewModal = ({ isOpen, imageUrl, onClose }) => {
                             </InputGroup>
                             
                             <InputGroup>
-                                <Label>Description</Label>
+                                <InputLabel>Description</InputLabel>
                                 <TextArea
                                     placeholder="Enter artwork description"
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
                                 />
+                                <InputDescription>
+                                    (Optional) Add a description to your artwork.
+                                </InputDescription>
                             </InputGroup>
                         </div>
                         
                         <ButtonContainer>
-                            <UploadButton 
+                            <SubmitButton 
                                 onClick={handleUploadToIPFS}
                                 disabled={isUploading}
                             >
                                 {isUploading ? 'Uploading...' : 'Upload to IPFS'}
-                            </UploadButton>
-                            <DownloadButton onClick={handleDownload}>
-                                Download
-                            </DownloadButton>
+                            </SubmitButton>
+                            <CancelButton onClick={onClose}>
+                                Cancel
+                            </CancelButton>
                         </ButtonContainer>
                     </RightSection>
                 </ModalContent>

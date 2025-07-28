@@ -110,7 +110,7 @@ const OptionCard = styled.div`
     transition: all 0.2s ease;
     
     &:hover {
-        border-color: #3b82f6;
+        border-color: #8b5cf6;
         transform: translateY(-2px);
     }
 `;
@@ -146,7 +146,7 @@ const CardTitle = styled.h3`
 `;
 
 const CardButton = styled.button`
-    background: ${props => props.primary ? '#3b82f6' : '#2a2a2a'};
+    background: ${props => props.primary ? '#8b5cf6' : '#2a2a2a'};
     color: #ffffff;
     border: none;
     padding: 12px 24px;
@@ -194,9 +194,64 @@ const FeatureItem = styled.li`
         transform: translateY(-50%);
         width: 4px;
         height: 4px;
-        background: #3b82f6;
+        background: #8b5cf6;
         border-radius: 50%;
     }
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 12px 16px;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+  
+  &:focus {
+    outline: none;
+    border-color: #8b5cf6;
+  }
+`;
+
+const Button = styled.button`
+  background: ${props => props.primary ? '#8b5cf6' : '#2a2a2a'};
+  color: #ffffff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: ${props => props.primary ? '#7c3aed' : '#3a3a3a'};
+  }
+`;
+
+const SubmitButton = styled.button`
+  background: #8b5cf6;
+  color: #ffffff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: #7c3aed;
+  }
+`;
+
+const GradientBackground = styled.div`
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
 `;
 
 const CreateArtworkModal = ({ isOpen, onClose, onSelectOption }) => {
@@ -232,7 +287,7 @@ const CreateArtworkModal = ({ isOpen, onClose, onSelectOption }) => {
                     <RightSection>
                         <OptionCard onClick={handleAIDraft}>
                             <CardIcon 
-                                gradient="linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)"
+                                gradient="linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)"
                                 iconStyle="clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);"
                             />
                             <CardTitle>AI Draft</CardTitle>

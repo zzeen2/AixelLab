@@ -77,20 +77,20 @@ const ToolButton = styled.button`
 `;
 
 const CompleteButton = styled.button`
-    background-color: #10b981;
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    padding: 12px 16px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    
-    &:hover {
-        background-color: #059669;
-        transform: translateY(-1px);
-    }
+  background-color: #8b5cf6;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: #7c3aed;
+    transform: translateY(-1px);
+  }
 `;
 
 const PaletteSection = styled.div`
@@ -111,11 +111,10 @@ const ColorSection = styled.div`
 `;
 
 const SectionTitle = styled.h3`
-    font-size: 16px;
+    font-size: 20px;
     font-weight: 600;
     color: #ffffff;
     margin: 0 0 16px 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 `;
 
 const SelectedColorBox = styled.div`
@@ -126,6 +125,28 @@ const SelectedColorBox = styled.div`
     border-radius: 12px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     align-self: center;
+`;
+
+const ToolLabel = styled.div`
+  font-size: 12px;
+  color: #8b949e;
+  font-weight: 500;
+  text-align: center;
+  margin-top: 8px;
+`;
+
+const ToolTitle = styled.h4`
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 8px 0;
+`;
+
+const ColorLabel = styled.div`
+  font-size: 14px;
+  color: #8b949e;
+  font-weight: 400;
+  margin-bottom: 8px;
 `;
 
 const PixelEditor = ({ draftImageUrl }) => {

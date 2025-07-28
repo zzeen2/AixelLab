@@ -16,19 +16,19 @@ const HeroSection = styled.div`
 `;
 
 const Title = styled.h1`
-    font-size: 48px;
-    font-weight: 700;
-    margin-bottom: 16px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+  font-size: 32px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 16px 0;
+  text-align: center;
 `;
 
 const Subtitle = styled.p`
-    font-size: 20px;
-    color: #8b949e;
-    margin-bottom: 32px;
+  font-size: 16px;
+  color: #8b949e;
+  margin: 0 0 32px 0;
+  text-align: center;
+  font-weight: 400;
 `;
 
 const ContentGrid = styled.div`
@@ -55,6 +55,13 @@ const CardTitle = styled.h3`
 const CardText = styled.p`
     color: #8b949e;
     line-height: 1.6;
+`;
+
+const SectionTitle = styled.h2`
+  font-size: 24px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 16px 0;
 `;
 
 const MainPage = () => {

@@ -21,42 +21,46 @@ const Title = styled.h1`
   font-size: 32px;
   font-weight: 700;
   color: #ffffff;
-  margin: 0 0 8px 0;
+  margin: 0 0 16px 0;
 `;
 
 const Subtitle = styled.p`
   font-size: 16px;
-  color: #9ca3af;
-  margin: 0;
+  color: #8b949e;
+  margin: 0 0 32px 0;
+  font-weight: 400;
 `;
 
 const VotingGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 20px;
   margin-top: 24px;
 `;
 
 const VoteCard = styled.div`
   background: #1a1a1a;
   border: 1px solid #2a2a2a;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 0;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   cursor: pointer;
   overflow: hidden;
+  position: relative;
 
   &:hover {
-    border-color: #3b82f6;
+    border-color: #8b5cf6;
     transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(139, 92, 246, 0.15);
   }
 `;
 
 const VoteImage = styled.img`
   width: 100%;
-  height: 180px;
+  height: 240px;
   object-fit: cover;
   display: block;
+  background: #0f0f0f;
 `;
 
 const VoteInfo = styled.div`
@@ -64,31 +68,39 @@ const VoteInfo = styled.div`
 `;
 
 const VoteTitle = styled.h3`
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   color: #ffffff;
   margin: 0 0 8px 0;
-  line-height: 1.2;
+  line-height: 1.3;
 `;
 
 const VoteDescription = styled.p`
   font-size: 14px;
   color: #8b949e;
   margin: 0 0 12px 0;
+  font-weight: 400;
   line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 `;
 
 const VoteMeta = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-top: 12px;
 `;
 
 const VoteStatus = styled.span`
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 4px 10px;
+  border-radius: 16px;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   
   &.active {
     background: #10b981;
@@ -101,7 +113,7 @@ const VoteStatus = styled.span`
   }
   
   &.approved {
-    background: #3b82f6;
+    background: #8b5cf6;
     color: #ffffff;
   }
   
@@ -114,14 +126,43 @@ const VoteStatus = styled.span`
 const VoteStats = styled.div`
   display: flex;
   gap: 12px;
-  font-size: 12px;
+  font-size: 13px;
   color: #8b949e;
+  font-weight: 500;
 `;
 
-const VoteStat = styled.span`
+const VoteStat = styled.div`
   display: flex;
   align-items: center;
   gap: 4px;
+  
+  &:first-child {
+    color: #10b981;
+  }
+  
+  &:last-child {
+    color: #ef4444;
+  }
+`;
+
+const VoteStatIcon = styled.span`
+  font-size: 14px;
+`;
+
+const VoteStatNumber = styled.span`
+  font-weight: 600;
+  color: #ffffff;
+`;
+
+const StatusBadge = styled.span`
+  font-size: 12px;
+  font-weight: 500;
+`;
+
+const VoteCount = styled.div`
+  font-size: 14px;
+  color: #8b949e;
+  font-weight: 400;
 `;
 
 const EmptyState = styled.div`
@@ -130,15 +171,20 @@ const EmptyState = styled.div`
   color: #9ca3af;
 `;
 
-const EmptyTitle = styled.h3`
-  font-size: 20px;
+const EmptyTitle = styled.h2`
+  font-size: 24px;
   font-weight: 600;
-  margin: 0 0 8px 0;
+  color: #8b949e;
+  text-align: center;
+  margin: 0 0 16px 0;
 `;
 
 const EmptyDescription = styled.p`
-  font-size: 14px;
+  font-size: 16px;
+  color: #8b949e;
+  text-align: center;
   margin: 0;
+  font-weight: 400;
 `;
 
 const VotingPage = () => {
@@ -227,8 +273,14 @@ const VotingPage = () => {
                       {getStatusText(vote.status)}
                     </VoteStatus>
                     <VoteStats>
-                      <VoteStat>👍 {vote.votesFor}</VoteStat>
-                      <VoteStat>👎 {vote.votesAgainst}</VoteStat>
+                      <VoteStat>
+                        <VoteStatIcon>👍</VoteStatIcon>
+                        <VoteStatNumber>{vote.votesFor}</VoteStatNumber>
+                      </VoteStat>
+                      <VoteStat>
+                        <VoteStatIcon>👎</VoteStatIcon>
+                        <VoteStatNumber>{vote.votesAgainst}</VoteStatNumber>
+                      </VoteStat>
                     </VoteStats>
                   </VoteMeta>
                 </VoteInfo>

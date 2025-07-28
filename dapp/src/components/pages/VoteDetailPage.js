@@ -7,15 +7,16 @@ import { getCurrentUser } from '../../api/auth';
 
 const PageContainer = styled.div`
   height: 100%;
-  margin-left: 55px;
-  margin-top: 52px;
+  overflow-y: auto;
+  max-width: 1400px;
+  margin: 0 auto;
   padding: 24px;
   box-sizing: border-box;
-  overflow-y: auto;
 `;
 
 const Header = styled.div`
   margin-bottom: 32px;
+  text-align: left;
 `;
 
 const BackButton = styled.button`
@@ -23,6 +24,7 @@ const BackButton = styled.button`
   border: none;
   color: #8b949e;
   font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -31,7 +33,7 @@ const BackButton = styled.button`
   padding: 0;
   
   &:hover {
-    color: #ffffff;
+    color: #8b5cf6;
   }
 `;
 
@@ -39,64 +41,69 @@ const Title = styled.h1`
   font-size: 32px;
   font-weight: 700;
   color: #ffffff;
-  margin: 0 0 8px 0;
+  margin: 0 0 12px 0;
 `;
 
 const Subtitle = styled.p`
   font-size: 16px;
   color: #8b949e;
   margin: 0;
+  font-weight: 400;
 `;
 
 const ContentGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr 400px;
-  gap: 40px;
+  gap: 20px;
   margin-top: 24px;
   align-items: start;
-  
-  @media (max-width: 1200px) {
-    grid-template-columns: 1fr;
-    gap: 24px;
-  }
+  margin-bottom: 40px;
 `;
 
 const ImageSection = styled.div`
   display: flex;
   flex-direction: column;
   gap: 24px;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 20px;
 `;
 
 const ArtworkImage = styled.img`
   width: 100%;
-  max-width: 600px;
+  max-width: 350px;
   height: auto;
   border-radius: 12px;
   display: block;
+  object-fit: contain;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 `;
 
 const InfoSection = styled.div`
   background: #1a1a1a;
   border: 1px solid #2a2a2a;
-  border-radius: 12px;
-  padding: 24px;
+  border-radius: 16px;
+  padding: 32px;
   height: fit-content;
-  margin-top: 0;
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
 `;
 
-const InfoTitle = styled.h3`
-  font-size: 20px;
+const InfoTitle = styled.h2`
+  font-size: 24px;
   font-weight: 600;
   color: #ffffff;
   margin: 0 0 16px 0;
 `;
 
 const InfoDescription = styled.p`
-  font-size: 14px;
+  font-size: 16px;
   color: #8b949e;
-  line-height: 1.5;
-  margin: 0 0 24px 0;
+  line-height: 1.6;
+  margin: 0 0 28px 0;
+  font-weight: 400;
 `;
 
 const VoteStatus = styled.div`
@@ -123,7 +130,7 @@ const StatusBadge = styled.span`
   }
   
   &.approved {
-    background: #3b82f6;
+    background: #8b5cf6;
     color: #ffffff;
   }
   
@@ -159,6 +166,7 @@ const StatLabel = styled.div`
   color: #8b949e;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  font-weight: 500;
 `;
 
 const VoteButtons = styled.div`
@@ -170,9 +178,9 @@ const VoteButtons = styled.div`
 const VoteButton = styled.button`
   flex: 1;
   padding: 12px 16px;
-  border: 1px solid ${props => props.voted ? '#3b82f6' : '#2a2a2a'};
+  border: 1px solid ${props => props.voted ? '#8b5cf6' : '#2a2a2a'};
   border-radius: 8px;
-  background: ${props => props.voted ? '#3b82f6' : 'transparent'};
+  background: ${props => props.voted ? '#8b5cf6' : 'transparent'};
   color: #ffffff;
   font-size: 14px;
   font-weight: 600;
@@ -180,8 +188,8 @@ const VoteButton = styled.button`
   transition: all 0.2s ease;
   
   &:hover {
-    border-color: #3b82f6;
-    background: ${props => props.voted ? '#3b82f6' : 'rgba(59, 130, 246, 0.1)'};
+    border-color: #8b5cf6;
+    background: ${props => props.voted ? '#8b5cf6' : 'rgba(139, 92, 246, 0.1)'};
   }
   
   &:disabled {
@@ -201,7 +209,7 @@ const ProgressBar = styled.div`
 
 const ProgressFill = styled.div`
   height: 100%;
-  background: #3b82f6;
+  background: #8b5cf6;
   width: ${props => props.percentage}%;
   transition: width 0.3s ease;
 `;
@@ -211,6 +219,7 @@ const ProgressText = styled.div`
   justify-content: space-between;
   font-size: 12px;
   color: #8b949e;
+  font-weight: 500;
 `;
 
 const TimeInfo = styled.div`
@@ -232,11 +241,13 @@ const TimeItem = styled.div`
 const TimeLabel = styled.span`
   font-size: 12px;
   color: #8b949e;
+  font-weight: 500;
 `;
 
 const TimeValue = styled.span`
   font-size: 12px;
   color: #ffffff;
+  font-weight: 400;
 `;
 
 const LoadingContainer = styled.div`

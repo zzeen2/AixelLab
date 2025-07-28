@@ -8,27 +8,30 @@ const LoginContainer = styled.div`
     padding: 20px;
 `;
 
-const GoogleButton = styled.button`
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 24px;
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: all 0.2s;
-    
-    &:hover {
-        background: #f8f9fa;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
+const LoginButton = styled.button`
+  background: #4285f4;
+  color: #ffffff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.2s;
+  
+  &:hover {
+    background: #3367d6;
+  }
 `;
 
-const GoogleIcon = styled.span`
-    font-weight: bold;
-    color: #4285f4;
+const ButtonText = styled.span`
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
 `;
 
 const SocialLogin = () => {
@@ -41,10 +44,9 @@ const SocialLogin = () => {
     }
     return (
         <LoginContainer>
-            <GoogleButton onClick={handleGoogleLogin}>
-                <GoogleIcon>G</GoogleIcon>
-                
-            </GoogleButton>
+            <LoginButton onClick={handleGoogleLogin}>
+                <ButtonText>G</ButtonText>
+            </LoginButton>
         </LoginContainer>
     )
 }

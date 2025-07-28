@@ -51,7 +51,7 @@ const Sidebar = styled.aside`
 
 const MainContent = styled.main`
     background-color: #0d1017;
-    padding: 24px;
+    padding: 0;
     overflow: hidden;
     height: 100%;
 `;

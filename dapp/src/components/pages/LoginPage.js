@@ -42,40 +42,43 @@ const LoginCard = styled.div`
 `;
 
 const Logo = styled.h1`
-    color: #333;
-    margin-bottom: 20px;
-    font-size: 28px;
-    font-weight: bold;
+  color: #333;
+  margin-bottom: 20px;
+  font-size: 32px;
+  font-weight: 700;
 `;
 
 const Title = styled.h2`
-    color: #333;
-    margin-bottom: 10px;
-    font-size: 24px;
+  color: #333;
+  margin-bottom: 10px;
+  font-size: 24px;
+  font-weight: 600;
 `;
 
 const Subtitle = styled.p`
-    color: #666;
-    margin-bottom: 30px;
-    font-size: 14px;
-    line-height: 1.5;
+  color: #666;
+  margin-bottom: 30px;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 400;
 `;
 
 const BackButton = styled.button`
-    background: none;
-    border: none;
-    color: #666;
-    cursor: pointer;
-    margin-top: 20px;
-    font-size: 14px;
-    padding: 8px 16px;
-    border-radius: 6px;
-    transition: all 0.2s;
-    
-    &:hover {
-        color: #333;
-        background: #f8f9fa;
-    }
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  margin-top: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  
+  &:hover {
+    color: #333;
+    background: #f8f9fa;
+  }
 `;
 
 export default LoginPage; 

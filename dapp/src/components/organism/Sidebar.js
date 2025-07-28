@@ -145,6 +145,35 @@ const Divider = styled.div`
     min-width: 240px;
 `;
 
+const MenuItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+  margin: 4px 8px;
+  
+  &:hover {
+    background: rgba(139, 92, 246, 0.1);
+  }
+  
+  ${props => props.active && `
+    background: rgba(139, 92, 246, 0.15);
+    border-left: 3px solid #8b5cf6;
+  `}
+`;
+
+const MenuText = styled.span`
+  font-size: 14px;
+  font-weight: ${props => props.active ? '600' : '400'};
+  color: ${props => props.active ? '#8b5cf6' : '#8b949e'};
+  white-space: nowrap;
+  opacity: ${props => props.isExpanded ? 1 : 0};
+  transition: opacity 0.3s ease;
+`;
+
 const Sidebar = ({ isExpanded }) => {
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const navigate = useNavigate();
