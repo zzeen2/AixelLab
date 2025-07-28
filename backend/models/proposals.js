@@ -4,10 +4,7 @@ class Proposal extends Model {
     static init(sequelize) {
         return super.init({
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-            proposal_hash: { type: DataTypes.STRING(100), allowNull: false, unique: true },
             artwork_id_fk: { type: DataTypes.INTEGER, allowNull: false },
-            title: { type: DataTypes.STRING(200), allowNull: false },
-            description: { type: DataTypes.TEXT, allowNull: true },
             created_by: { type: DataTypes.STRING(50), allowNull: false },
             start_at: { type: DataTypes.DATE, allowNull: false },
             end_at: { type: DataTypes.DATE, allowNull: false },

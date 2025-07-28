@@ -13,10 +13,6 @@ router.get('/google/callback',
     passport.authenticate('google', { failureRedirect: 'http://localhost:3000/login' }),
     async (req, res) => {
         try {
-            console.log('Google OAuth 콜백:', req.user);
-            console.log('콜백 세션:', req.session);
-            console.log('콜백 인증 상태:', req.isAuthenticated());
-            
             // DB에 사용자 저장/업데이트
             const [user, created] = await db.User.findOrCreate({
                 where: { google_id: req.user.id },
@@ -37,7 +33,6 @@ router.get('/google/callback',
                 });
             }
             
-            console.log('db에 사용자 저장', user.google_id);
             res.redirect('http://localhost:3000/');
         } catch (error) {
             console.error(error);

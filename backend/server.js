@@ -3,6 +3,7 @@ const app = express();
 const cors = require('cors');
 const session = require('express-session');
 const passport = require('passport');
+const db = require('./models');
 require('dotenv').config();
 
 // 환경변수
@@ -24,7 +25,7 @@ app.use(session({
         secure: false, 
         httpOnly: true,
         sameSite: 'lax',
-        maxAge: 24 * 60 * 60 * 1000 
+        maxAge: 24 * 60 * 60 * 1000
     }
 }));
 
@@ -33,11 +34,13 @@ require('./config/passport');
 app.use(passport.initialize());
 app.use(passport.session());
 
+
+
 // 라우터 설정
 app.use('/auth', require('./routes/auth'));
 app.use('/artwork', require('./routes/artwork'));
 app.use('/proxy-image', require('./routes/proxy'));
-app.use('/votig', require('./routes/voting'))
+app.use('/voting', require('./routes/voting'))
 
 
 
@@ -48,3 +51,4 @@ app.listen(4000, (error) => {
         console.log("server on");
     }
 });
+

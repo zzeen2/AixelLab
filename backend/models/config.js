@@ -34,7 +34,7 @@ artworks.associate(db);
 proposals.associate(db);
 votes.associate(db);
 
-sequelize.sync({ force: true }).then(() => {
+sequelize.sync({ force: false }).then(() => {
     console.log('database on~');
 }).catch(console.log);
 

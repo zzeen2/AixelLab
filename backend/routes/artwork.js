@@ -8,7 +8,7 @@ const { isAuthenticated } = require('../middleware/auth');
 const PINATA_JWT = process.env.PINATA_JWT;
 
 // 작품 제출
-router.post('/submit', async (req, res) => {
+router.post('/submit', isAuthenticated, async (req, res) => {
     // 세션 디버깅
     console.log('세션:', req.session);
     console.log('인증 상태:', req.isAuthenticated());
@@ -78,8 +78,23 @@ router.post('/submit', async (req, res) => {
                 { where: { google_id: req.user.id } }
             );
         }
+
+        //proposal 생
+        const proposalData = {
+            artwork_id_fk: artwork.id,
+            created_by: req.user.id, 
+            start_at: new Date(), 
+            end_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), //todo 7일후 종료
+            min_votes: 10, 
+            status: 'active'
+        };
         
-        res.json({ success: true, artwork: { id: artwork.id, title, imageIpfsUri: ipfsUri } });
+        console.log('Proposal data:', proposalData);
+        
+        const proposal = await db.Proposal.create(proposalData);
+        console.log('Proposal created:', proposal.id);
+        
+        res.json({ artwork: artwork, proposal:proposal });
     } catch (error) {
         console.log(error);
         res.status(500).json({ error: "작품제출 실패" });

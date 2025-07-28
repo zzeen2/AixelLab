@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import MainTemplate from '../templates/MainTemplate';
+import { submitVote, getVoteDetail } from '../../api/voting';
+import { getCurrentUser } from '../../api/auth';
 
 const PageContainer = styled.div`
   height: 100%;
@@ -246,39 +248,61 @@ const LoadingContainer = styled.div`
   font-size: 16px;
 `;
 
+const VotedMessage = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  color: #8b949e;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  width: 100%;
+`;
+
+
+
 const VoteDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [vote, setVote] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userVote, setUserVote] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    loadVoteDetail();
+    const initializePage = async () => {
+      await checkLoginStatus();
+      await loadVoteDetail();
+    };
+    initializePage();
   }, [id]);
+
+  const checkLoginStatus = async () => {
+    try {
+      await getCurrentUser();
+      setIsLoggedIn(true);
+    } catch (error) {
+      setIsLoggedIn(false);
+    }
+  };
 
   const loadVoteDetail = async () => {
     try {
-      // TODO: 실제 API 호출
-      // const response = await getVoteDetail(id);
-      // setVote(response.data);
-      
-      // 임시 데이터
-      setVote({
-        id: parseInt(id),
-        title: "Cat Pixel Art",
-        description: "A beautiful pixel art featuring a cute cat in a garden setting. The artwork showcases vibrant colors and detailed pixel work that captures the essence of feline grace and charm.",
-        imageUrl: "https://via.placeholder.com/600x600/8b5cf6/ffffff?text=Cat+Pixel+Art",
-        status: "active",
-        startAt: "2024-01-15T00:00:00Z",
-        endAt: "2024-01-22T23:59:59Z",
-        votesFor: 12,
-        votesAgainst: 3,
-        totalVotes: 15,
-        minVotes: 10
-      });
+      const response = await getVoteDetail(id);
+      if (response && response.vote) {
+        setVote(response.vote);
+        
+        // 사용자의 기존 투표 확인
+        if (isLoggedIn && response.vote.userVote) {
+          setUserVote(response.vote.userVote);
+        }
+      }
     } catch (error) {
-      console.error('Failed to load vote detail:', error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -286,12 +310,21 @@ const VoteDetailPage = () => {
 
   const handleVote = async (voteType) => {
     try {
-      // TODO: 실제 투표 API 호출
-      // await submitVote(id, voteType);
+      // 로그인 상태 재확인
+      if (!isLoggedIn) {
+        alert('Login required');
+        return;
+      }
+      
+      await submitVote(id, voteType);
       setUserVote(voteType);
-      console.log('Vote submitted:', voteType);
+      await loadVoteDetail();
     } catch (error) {
-      console.error('Failed to submit vote:', error);
+      console.error('투표 실패:', error);
+      if (error.response?.status === 401) {
+        alert('Login required. Please login again.');
+        setIsLoggedIn(false);
+      }
     }
   };
 
@@ -396,20 +429,28 @@ const VoteDetailPage = () => {
 
             {!isVoteClosed() && (
               <VoteButtons>
-                <VoteButton
-                  voted={userVote === 'for'}
-                  onClick={() => handleVote('for')}
-                  disabled={userVote !== null}
-                >
-                  👍 Vote For
-                </VoteButton>
-                <VoteButton
-                  voted={userVote === 'against'}
-                  onClick={() => handleVote('against')}
-                  disabled={userVote !== null}
-                >
-                  👎 Vote Against
-                </VoteButton>
+                {userVote ? (
+                  <VotedMessage>
+                    You have already voted {userVote === 'for' ? 'FOR' : 'AGAINST'} this proposal
+                  </VotedMessage>
+                ) : (
+                  <>
+                    <VoteButton
+                      voted={false}
+                      onClick={() => isLoggedIn ? handleVote('for') : alert('Login required')}
+                      disabled={false}
+                    >
+                      Vote For
+                    </VoteButton>
+                    <VoteButton
+                      voted={false}
+                      onClick={() => isLoggedIn ? handleVote('against') : alert('Login required')}
+                      disabled={false}
+                    >
+                      Vote Against
+                    </VoteButton>
+                  </>
+                )}
               </VoteButtons>
             )}
 

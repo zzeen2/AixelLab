@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import MainTemplate from '../templates/MainTemplate';
+import { getVotes } from '../../api/voting';
 
 const PageContainer = styled.div`
   height: 100%;
@@ -152,37 +153,21 @@ const VotingPage = () => {
 
   const loadVotes = async () => {
     try {
-      //TODO: 실제 API 호출
-      // const response = await getVotes();
-      // setVotes(response.data);
+      const response = await getVotes();
+      console.log("API Response:", response);
+      console.log("Response type:", typeof response);
+      console.log("Response keys:", Object.keys(response));
       
-      // 임시 데이터
-      setVotes([
-        {
-          id: 1,
-          title: "Cat Pixel Art",
-          description: "Cute cat pixel art artwork.",
-          imageUrl: "https://via.placeholder.com/320x200/8b5cf6/ffffff?text=Vote+1",
-          status: "active",
-          startAt: "2024-01-15",
-          endAt: "2024-01-22",
-          votesFor: 12,
-          votesAgainst: 3
-        },
-        {
-          id: 2,
-          title: "Space Background Pixel Art",
-          description: "Pixel art artwork with space theme.",
-          imageUrl: "https://via.placeholder.com/320x200/3b82f6/ffffff?text=Vote+2",
-          status: "closed",
-          startAt: "2024-01-10",
-          endAt: "2024-01-17",
-          votesFor: 8,
-          votesAgainst: 5
-        }
-      ]);
+      if (response && response.votes) {
+        console.log("Votes length:", response.votes.length);
+        setVotes(response.votes);
+      } else {
+        console.error('Unexpected response structure:', response);
+        setVotes([]);
+      }
     } catch (error) {
       console.error('Failed to load votes:', error);
+      setVotes([]);
     } finally {
       setLoading(false);
     }
@@ -205,7 +190,7 @@ const VotingPage = () => {
   const handleVoteClick = (voteId) => {
     navigate(`/voting/${voteId}`);
   };
-
+  
   if (loading) {
     return (
       <MainTemplate>
