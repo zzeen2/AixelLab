@@ -37,6 +37,7 @@ app.use(passport.session());
 app.use('/auth', require('./routes/auth'));
 app.use('/artwork', require('./routes/artwork'));
 app.use('/proxy-image', require('./routes/proxy'));
+app.use('/votig', require('./routes/voting'))
 
 
 
