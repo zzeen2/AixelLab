@@ -7,7 +7,7 @@ class Vote extends Model {
             proposal_id_fk: { type: DataTypes.INTEGER, allowNull: false },
             voter_google_id_fk: { type: DataTypes.STRING(50), allowNull: false },
             vote_type: { type: DataTypes.ENUM('for', 'against'), allowNull: false },
-            vote_weight: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
+            vote_weight: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 }, //todo 
             created_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW }
         }, {
             sequelize,
