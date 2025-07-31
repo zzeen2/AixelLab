@@ -10,6 +10,7 @@
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.10.0",
     "color-thief-browser": "^2.0.2",
+    "ethers": "^6.15.0",
     "googleapis": "^153.0.0",
     "react": "^19.1.0",
     "react-colorful": "^5.6.1",
