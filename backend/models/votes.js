@@ -5,9 +5,9 @@ class Vote extends Model {
         return super.init({
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             proposal_id_fk: { type: DataTypes.INTEGER, allowNull: false },
-            voter_google_id_fk: { type: DataTypes.STRING(50), allowNull: false },
+            voter_user_id_fk: { type: DataTypes.INTEGER, allowNull: false },
             vote_type: { type: DataTypes.ENUM('for', 'against'), allowNull: false },
-            vote_weight: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 }, //todo 
+            vote_weight: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
             created_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW }
         }, {
             sequelize,
@@ -25,8 +25,8 @@ class Vote extends Model {
             targetKey: 'id' 
         });
         models.Vote.belongsTo(models.User, { 
-            foreignKey: 'voter_google_id_fk', 
-            targetKey: 'google_id' 
+            foreignKey: 'voter_user_id_fk', 
+            targetKey: 'id' 
         });
     }
 }
