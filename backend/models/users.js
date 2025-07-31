@@ -32,6 +32,10 @@ class User extends Model {
                 allowNull: false,
                 defaultValue: 'google'
             },
+            avatar_color: {
+                type: DataTypes.STRING(7),
+                allowNull: true,
+            },
             is_eligible_voter: { 
                 type: DataTypes.BOOLEAN, 
                 defaultValue: false 

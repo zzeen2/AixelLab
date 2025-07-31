@@ -3,6 +3,7 @@ const passport = require('passport');
 const router = express.Router();
 const db = require('../models');
 const { ethers } = require('ethers');
+const { generateRandomUsername, generateRandomColor } = require('../utils/randomGenerator');
 
 // Google 로그인
 router.get('/google', passport.authenticate('google', {
@@ -73,7 +74,7 @@ router.post('/metamask/message', async (req, res) => {
 // MetaMask 서명 검증 및 로그인
 router.post('/metamask/verify', async (req, res) => {
     try {
-        const { walletAddress, signature, displayName } = req.body;
+        const { walletAddress, signature } = req.body;
         
         if (!walletAddress || !signature) {
             return res.status(400).json({ success: false, message: '지갑 주소와 서명이 필요합니다.' });
@@ -110,23 +111,29 @@ router.post('/metamask/verify', async (req, res) => {
             return res.status(400).json({ success: false, message: '서명 검증 실패' });
         }
 
+        // 자동으로 랜덤 닉네임과 색상 생성
+        const randomUsername = generateRandomUsername();
+        const randomColor = generateRandomColor();
+        
         // DB에 사용자 저장/업데이트
         const [user, created] = await db.User.findOrCreate({
             where: { wallet_address: walletAddress.toLowerCase() },
             defaults: {
                 google_id: null,
                 email: null,
-                display_name: displayName || `User_${walletAddress.slice(0, 6)}`,
+                display_name: randomUsername,
                 wallet_address: walletAddress.toLowerCase(),
                 login_type: 'metamask',
+                avatar_color: randomColor,
                 is_eligible_voter: true,
                 vote_weight: 0
             }
         });
         
-        if (!created && displayName) {
+        if (!created && !user.avatar_color) {
+            // 기존 사용자에게 아바타 색상이 없으면 추가
             await user.update({
-                display_name: displayName
+                avatar_color: randomColor
             });
         }
 
@@ -149,6 +156,7 @@ router.post('/metamask/verify', async (req, res) => {
                 display_name: user.display_name,
                 wallet_address: user.wallet_address,
                 login_type: user.login_type,
+                avatar_color: user.avatar_color,
                 is_eligible_voter: user.is_eligible_voter,
                 vote_weight: user.vote_weight
             }
@@ -179,6 +187,7 @@ router.get('/user', async (req, res) => {
                         display_name: user.display_name,
                         wallet_address: user.wallet_address,
                         login_type: user.login_type,
+                        avatar_color: user.avatar_color,
                         is_eligible_voter: user.is_eligible_voter,
                         vote_weight: user.vote_weight,
                         picture: req.user.picture
@@ -202,6 +211,7 @@ router.get('/user', async (req, res) => {
                         display_name: user.display_name,
                         wallet_address: user.wallet_address,
                         login_type: user.login_type,
+                        avatar_color: user.avatar_color,
                         is_eligible_voter: user.is_eligible_voter,
                         vote_weight: user.vote_weight,
                         picture: null // MetaMask 사용자는 프로필 이미지 없음

@@ -4,6 +4,7 @@ import { NetworkInfo, WalletInfo} from "../atoms";
 import { SearchBar } from "../molecules";
 import { useNavigate } from 'react-router-dom';
 import { getCurrentUser, requestMetaMaskMessage, verifyMetaMaskSignature } from '../../api/auth';
+import UserAvatar from '../atoms/ui/UserAvatar';
 
 const HeaderContainer = styled.div`
     display: flex;
@@ -394,22 +395,15 @@ const Header = () => {
 
             console.log('서명 완료:', signature);
 
-            // 5. 사용자 이름 입력 받기 (선택사항)
-            const displayName = prompt('사용자 이름을 입력하세요 (선택사항):', '');
-
-            // 6. 서버에 서명 검증 요청
+            // 5. 서버에 서명 검증 요청 (prompt 제거됨)
             const verifyResponse = await verifyMetaMaskSignature(
                 walletAddress, 
-                signature, 
-                displayName
+                signature
             );
 
             if (verifyResponse.success) {
-                // 7. 로그인 성공 - 사용자 정보 저장
-                const userData = {
-                    ...verifyResponse.user,
-                    picture: null // MetaMask 사용자는 프로필 이미지 없음
-                };
+                // 6. 로그인 성공 - 사용자 정보 저장
+                const userData = verifyResponse.user;
                 
                 localStorage.setItem('userInfo', JSON.stringify(userData));
                 setUserInfo(userData);
@@ -491,13 +485,11 @@ const Header = () => {
                 <div ref={modalRef}>
                     <ProfileIcon onClick={handleProfileClick}>
                         {userInfo ? (
-                            userInfo.picture ? (
-                                <ProfileImage src={userInfo.picture} alt="Profile" />
-                            ) : (
-                                <QuestionMark style={{ background: '#8b5cf6', color: 'white' }}>
-                                    {userInfo.display_name ? userInfo.display_name[0].toUpperCase() : 'W'}
-                                </QuestionMark>
-                            )
+                            <UserAvatar 
+                                user={userInfo} 
+                                size="32px" 
+                                clickable={true}
+                            />
                         ) : (
                             <QuestionMark>?</QuestionMark>
                         )}
@@ -538,24 +530,11 @@ const Header = () => {
                     {/* 로그인된 상태 모달 */}
                     <ProfileModal show={showProfileModal}>
                         <ProfileHeader>
-                            {userInfo?.picture ? (
-                                <ProfileImageLarge src={userInfo.picture} alt="Profile" />
-                            ) : (
-                                <div style={{
-                                    width: '48px',
-                                    height: '48px',
-                                    borderRadius: '50%',
-                                    background: '#8b5cf6',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: 'white',
-                                    fontSize: '20px',
-                                    fontWeight: 'bold'
-                                }}>
-                                    {userInfo?.display_name ? userInfo.display_name[0].toUpperCase() : 'W'}
-                                </div>
-                            )}
+                            <UserAvatar 
+                                user={userInfo} 
+                                size="48px" 
+                                clickable={false}
+                            />
                             <ProfileInfo>
                                 <ProfileDisplayName>{userInfo?.display_name}</ProfileDisplayName>
                                 <ProfileEmail>

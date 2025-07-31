@@ -31,12 +31,11 @@ export const requestMetaMaskMessage = async (walletAddress) => {
 };
 
 // MetaMask 서명 검증 및 로그인
-export const verifyMetaMaskSignature = async (walletAddress, signature, displayName) => {
+export const verifyMetaMaskSignature = async (walletAddress, signature) => {
     try {
         const response = await axios.post(`${API_BASE_URL}/auth/metamask/verify`, {
             walletAddress,
-            signature,
-            displayName
+            signature
         }, {
             withCredentials: true
         });
