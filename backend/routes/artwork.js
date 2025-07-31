@@ -4,42 +4,20 @@ const FormData = require('form-data');
 const router = express.Router();
 const db = require('../models');
 const { isAuthenticated } = require('../middleware/auth');
+const { getCurrentUser } = require('../utils/auth');
 
 const PINATA_JWT = process.env.PINATA_JWT;
 
 // 작품 제출
 router.post('/submit', isAuthenticated, async (req, res) => {
-    // 세션 디버깅
-    console.log('세션:', req.session);
-    console.log('인증 상태:', req.isAuthenticated());
-    console.log('사용자:', req.user);
-    console.log('쿠키:', req.headers.cookie);
-    
     // 사용자 정보 가져오기 (Google OAuth 또는 MetaMask)
-    let currentUser = null;
-    let userGoogleId = null;
-    let userId = null;
+    const { user: currentUser, userId, loginType, error } = await getCurrentUser(req);
     
-    if (req.isAuthenticated() && req.user) {
-        // Google OAuth 사용자
-        userGoogleId = req.user.id;
-        currentUser = await db.User.findOne({ where: { google_id: userGoogleId } });
-        userId = currentUser?.id;
-    } else if (req.session?.user?.login_type === 'metamask') {
-        // MetaMask 사용자
-        userId = req.session.user.id;
-        currentUser = await db.User.findOne({ where: { id: userId } });
-        userGoogleId = null; // MetaMask 사용자는 google_id가 null
-    }
-    
-    if (!currentUser) {
-        return res.status(401).json({ error: "사용자 정보를 찾을 수 없습니다" });
-    }
+    if (error) return res.status(401).json({ success: false, message: "사용자 정보를 찾을 수 없습니다" });
     
     const { title, description, imageData } = req.body;
-    if (!title || !imageData) {
-        return res.status(400).json({ error: "작품 제목과 이미지를 확인해주세요." });
-    }
+
+    if (!title || !imageData) return res.status(400).json({ error: "작품 제목과 이미지를 확인해주세요." });
 
     try {
         // pinata에 이미지 업로드
@@ -77,9 +55,9 @@ router.post('/submit', isAuthenticated, async (req, res) => {
         
         const metadataIpfsUri = `https://gateway.pinata.cloud/ipfs/${metadataResponse.data.IpfsHash}`;
         
-        // db 저장 (user_id_fk 사용)
+        // db 저장
         const artwork = await db.Artwork.create({
-            user_id_fk: userId, // 변경된 필드명 사용
+            user_id_fk: userId,
             title,
             description,
             image_ipfs_uri: ipfsUri,
@@ -104,24 +82,43 @@ router.post('/submit', isAuthenticated, async (req, res) => {
             min_votes: 10, 
             status: 'active'
         };
-        
-        console.log('Proposal data:', proposalData);
-        
+
         const proposal = await db.Proposal.create(proposalData);
-        console.log('Proposal created:', proposal.id);
-        
-        res.json({ artwork: artwork, proposal:proposal });
+
+        return res.status(201).json({
+            success: true,
+            message: '작품이 성공적으로 등록되었습니다.',
+            artwork: {
+                id: artwork.id,
+                title: artwork.title,
+                description: artwork.description,
+                image_url: ipfsUri,
+                metadata_url: metadataIpfsUri,
+                status: artwork.status
+            },
+            proposal: {
+                id: proposal.id,
+                status: proposal.status,
+                end_at: proposal.end_at
+            }
+        });
+
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ error: "작품제출 실패" });
+        console.error('작품 제출 실패:', error);
+        return res.status(500).json({ success: false, message: '작품 제출 중 오류가 발생했습니다.' });
     }
 });
 
 // 사용자 작품 목록 조회
 router.get('/user/artworks', isAuthenticated, async (req, res) => {
     try {
+        // 사용자 정보 가져오기
+        const { user: currentUser, userId, loginType, error } = await getCurrentUser(req);
+        
+        if (error) return res.status(401).json({ success: false, message: "사용자 정보를 찾을 수 없습니다" });
+        
         const artworks = await db.Artwork.findAll({
-            where: { google_id_fk: req.user.id },
+            where: { user_id_fk: userId },
             order: [['createdAt', 'DESC']]
         });
         
@@ -135,23 +132,25 @@ router.get('/user/artworks', isAuthenticated, async (req, res) => {
 // 사용자 통계 조회
 router.get('/user/stats', isAuthenticated, async (req, res) => {
     try {
-        const user = await db.User.findOne({ where: { google_id: req.user.id } });
-        if (!user) {
-            return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다' });
+        // 사용자 정보 가져오기
+        const { user: currentUser, userId, loginType, error } = await getCurrentUser(req);
+        
+        if (error) {
+            return res.status(401).json({ success: false, message: "사용자 정보를 찾을 수 없습니다" });
         }
         
         const artworkCount = await db.Artwork.count({
-            where: { google_id_fk: req.user.id }
+            where: { user_id_fk: userId }
         });
         
         const approvedCount = await db.Artwork.count({
-            where: { google_id_fk: req.user.id, status: 'approved' }
+            where: { user_id_fk: userId, status: 'approved' }
         });
         
         return res.json({
             success: true,
             stats: {
-                vote_weight: user.vote_weight,
+                vote_weight: currentUser.vote_weight,
                 total_artworks: artworkCount,
                 approved_artworks: approvedCount
             }
