@@ -54,3 +54,11 @@ https://www.npmjs.com/package/react-colorful
 - color-thief-browser
 for 핵심 컬러 추출
 https://goni9071.tistory.com/411
+
+### 시나리오
+1. 작품 업로드 : 프론트 > 이미지 업로드 > IPFS 업로드 > URI 생성
+2. 오프체인 투표생성 : 백엔드 > 투표생성 > DB저장 > 프엔에 투표 시작 알림
+3. 사용자 투표 : 사용자 > 투표 > 백엔드에서 DB 업데이트 > 투표수 증가
+4. 승인 조건 : 백엔드에서 투표수 확인 > ??개 달성 > 자동 민팅
+5. NFT 민팅 : Backend > ArtworkNFT.mintApprovedArtwork() 호출 > 블록체인 실행 > NFT 생성
+6. 민팅 완 : 아티스트 > NFT 소유권 확보 > 100% 로열티 > 거래 가능

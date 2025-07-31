@@ -3,12 +3,43 @@ const { DataTypes, Model } = require('sequelize');
 class User extends Model {
     static init(sequelize) {
         return super.init({
-            google_id: { type: DataTypes.STRING(50), primaryKey: true, allowNull: false },
-            email: { type: DataTypes.STRING(100), allowNull: false, unique: true },
-            display_name: { type: DataTypes.STRING(50), allowNull: false },
-            wallet_address: { type: DataTypes.STRING(50), allowNull: false },
-            is_eligible_voter: { type: DataTypes.BOOLEAN, defaultValue: false },
-            vote_weight: { type: DataTypes.INTEGER, defaultValue: 0 }
+            id: { 
+                type: DataTypes.INTEGER,
+                primaryKey: true,
+                autoIncrement: true
+            },
+            google_id: { 
+                type: DataTypes.STRING(50), 
+                allowNull: true,  
+                unique: true 
+            },
+            email: { 
+                type: DataTypes.STRING(100), 
+                allowNull: true, 
+                unique: true 
+            },
+            display_name: { 
+                type: DataTypes.STRING(50), 
+                allowNull: false 
+            },
+            wallet_address: { 
+                type: DataTypes.STRING(42), 
+                allowNull: false,
+                unique: true
+            },
+            login_type: {
+                type: DataTypes.ENUM('google', 'metamask'),
+                allowNull: false,
+                defaultValue: 'google'
+            },
+            is_eligible_voter: { 
+                type: DataTypes.BOOLEAN, 
+                defaultValue: false 
+            },
+            vote_weight: { 
+                type: DataTypes.INTEGER, 
+                defaultValue: 0 
+            }
         }, {
             sequelize,
             timestamps: true,
@@ -20,7 +51,7 @@ class User extends Model {
     }
 
     static associate(models) {
-        models.User.hasMany(models.Artwork, { foreignKey: 'google_id_fk', sourceKey: 'google_id' });
+        models.User.hasMany(models.Artwork, { foreignKey: 'user_id_fk', sourceKey: 'id' });
     }
 }
 
