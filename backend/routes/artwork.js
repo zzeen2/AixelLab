@@ -15,9 +15,25 @@ router.post('/submit', isAuthenticated, async (req, res) => {
     console.log('사용자:', req.user);
     console.log('쿠키:', req.headers.cookie);
     
-    // 로그인 체크
-    if (!req.isAuthenticated()) {
-        return res.status(401).json({ error: "로그인이 필요합니다" });
+    // 사용자 정보 가져오기 (Google OAuth 또는 MetaMask)
+    let currentUser = null;
+    let userGoogleId = null;
+    let userId = null;
+    
+    if (req.isAuthenticated() && req.user) {
+        // Google OAuth 사용자
+        userGoogleId = req.user.id;
+        currentUser = await db.User.findOne({ where: { google_id: userGoogleId } });
+        userId = currentUser?.id;
+    } else if (req.session?.user?.login_type === 'metamask') {
+        // MetaMask 사용자
+        userId = req.session.user.id;
+        currentUser = await db.User.findOne({ where: { id: userId } });
+        userGoogleId = null; // MetaMask 사용자는 google_id가 null
+    }
+    
+    if (!currentUser) {
+        return res.status(401).json({ error: "사용자 정보를 찾을 수 없습니다" });
     }
     
     const { title, description, imageData } = req.body;
@@ -48,8 +64,9 @@ router.post('/submit', isAuthenticated, async (req, res) => {
         // 메타데이터 업로드
         const metadata = {
             name: title,
-            description: description || "No description",
-            image: ipfsUri
+            description,
+            image: ipfsUri,
+            attributes: []
         };
         
         const metadataResponse = await axios.post(
@@ -60,9 +77,9 @@ router.post('/submit', isAuthenticated, async (req, res) => {
         
         const metadataIpfsUri = `https://gateway.pinata.cloud/ipfs/${metadataResponse.data.IpfsHash}`;
         
-        // db 저장
+        // db 저장 (user_id_fk 사용)
         const artwork = await db.Artwork.create({
-            google_id_fk: req.user.id,
+            user_id_fk: userId, // 변경된 필드명 사용
             title,
             description,
             image_ipfs_uri: ipfsUri,
@@ -70,19 +87,18 @@ router.post('/submit', isAuthenticated, async (req, res) => {
             status: 'pending'
         });
 
-        // 투표권
-        const user = await db.User.findOne({ where: { google_id: req.user.id } });
-        if (!user.is_eligible_voter) {
-            await db.User.update(
-                { is_eligible_voter: true, vote_weight: 1 },
-                { where: { google_id: req.user.id } }
-            );
+        // 투표권 부여
+        if (!currentUser.is_eligible_voter) {
+            await currentUser.update({
+                is_eligible_voter: true,
+                vote_weight: 1
+            });
         }
 
-        //proposal 생
+        // proposal 생성
         const proposalData = {
             artwork_id_fk: artwork.id,
-            created_by: req.user.id, 
+            created_by: userId, // 변경된 사용자 ID 사용
             start_at: new Date(), 
             end_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), //todo 7일후 종료
             min_votes: 10, 

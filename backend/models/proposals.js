@@ -5,7 +5,7 @@ class Proposal extends Model {
         return super.init({
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             artwork_id_fk: { type: DataTypes.INTEGER, allowNull: false },
-            created_by: { type: DataTypes.STRING(50), allowNull: false },
+            created_by: { type: DataTypes.INTEGER, allowNull: false },
             start_at: { type: DataTypes.DATE, allowNull: false },
             end_at: { type: DataTypes.DATE, allowNull: false },
             min_votes: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
@@ -26,7 +26,7 @@ class Proposal extends Model {
 
     static associate(models) {
         models.Proposal.belongsTo(models.Artwork, { foreignKey: 'artwork_id_fk', targetKey: 'id' });
-        models.Proposal.belongsTo(models.User, { foreignKey: 'created_by', targetKey: 'google_id' });
+        models.Proposal.belongsTo(models.User, { foreignKey: 'created_by', targetKey: 'id' });
         models.Proposal.hasMany(models.Vote, { foreignKey: 'proposal_id_fk', sourceKey: 'id' });
     }
 }

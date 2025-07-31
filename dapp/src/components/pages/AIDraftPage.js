@@ -17,22 +17,23 @@ const PageContainer = styled.div`
 const LeftPanel = styled.div`
     width: 30%;
     background-color: #1a1a1a;
-    border-radius: 12px;
+    border: 1px solid #333;
+    border-radius: 6px;
     padding: 24px;
-    border: 1px solid #2a2a2a;
     height: 100%;
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
     overflow: hidden;
+    gap: 16px;
 `;
 
 const RightPanel = styled.div`
     width: 70%;
     background-color: #1a1a1a;
-    /* border-radius: 12px; */
     padding: 24px;
-    border: 1px solid #2a2a2a;
+    border: 1px solid #333;
+    border-radius: 6px;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -42,91 +43,90 @@ const RightPanel = styled.div`
 `;
 
 const Title = styled.h1`
-  font-size: 32px;
-  font-weight: 700;
-  color: #ffffff;
-  margin: 0 0 16px 0;
+    font-size: 28px;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0 0 16px 0;
 `;
 
 const Subtitle = styled.p`
-  font-size: 16px;
-  color: #8b949e;
-  margin: 0 0 32px 0;
-  font-weight: 400;
+    font-size: 14px;
+    color: #666;
+    margin: 0 0 24px 0;
 `;
 
 const SectionTitle = styled.h2`
-  font-size: 24px;
-  font-weight: 600;
-  color: #ffffff;
-  margin: 0 0 16px 0;
+    font-size: 20px;
+    font-weight: 500;
+    color: #ffffff;
+    margin: 0 0 16px 0;
 `;
 
 const ToolTitle = styled.h3`
-  font-size: 20px;
-  font-weight: 600;
-  color: #ffffff;
-  margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 500;
+    color: #ffffff;
+    margin: 0 0 8px 0;
 `;
 
 const ToolDescription = styled.p`
-  font-size: 14px;
-  color: #8b949e;
-  margin: 0;
-  font-weight: 400;
+    font-size: 12px;
+    color: #666;
+    margin: 0;
 `;
 
 const PromptInput = styled.textarea`
-  width: 100%;
-  min-height: 120px;
-  padding: 16px;
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
-  border-radius: 8px;
-  color: #ffffff;
-  font-size: 14px;
-  resize: vertical;
-  font-family: inherit;
-  transition: border-color 0.2s ease;
-  
-  &:focus {
-    outline: none;
-    border-color: #8b5cf6;
-  }
-  
-  &::placeholder {
-    color: #8b949e;
-  }
+    width: 100%;
+    min-height: 120px;
+    padding: 16px;
+    background: #222;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 14px;
+    resize: vertical;
+    font-family: inherit;
+    transition: border-color 0.2s ease;
+    box-sizing: border-box;
+    
+    &:focus {
+        outline: none;
+        border-color: #8b5cf6;
+    }
+    
+    &::placeholder {
+        color: #666;
+    }
 `;
 
-
 const GenerateButton = styled.button`
-  background: #8b5cf6;
-  color: #ffffff;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover:not(:disabled) {
-    background: #7c3aed;
-    transform: translateY(-1px);
-  }
-  
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+    background: #8b5cf6;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 16px;
+    
+    &:hover:not(:disabled) {
+        background: #7c3aed;
+        transform: translateY(-1px);
+    }
+    
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
 `;
 
 const PreviewArea = styled.div`
     flex: 1;
-    background-color: #0d1017;
-    border: 2px dashed #2a2a2a;
-    border-radius: 12px;
+    background-color: #222;
+    border: 2px dashed #333;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -137,10 +137,9 @@ const PreviewArea = styled.div`
 `;
 
 const PreviewText = styled.p`
-    color: #8b949e;
-    font-size: 16px;
+    color: #666;
+    font-size: 14px;
     text-align: center;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 `;
 
 const ActionButtons = styled.div`
@@ -150,39 +149,38 @@ const ActionButtons = styled.div`
 `;
 
 const ActionButton = styled.button`
-  background: ${props => props.primary ? '#8b5cf6' : 'transparent'};
-  color: #ffffff;
-  border: 1px solid ${props => props.primary ? '#8b5cf6' : '#2a2a2a'};
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover:not(:disabled) {
-    background: ${props => props.primary ? '#7c3aed' : 'rgba(139, 92, 246, 0.1)'};
-    border-color: #8b5cf6;
-  }
-  
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+    background: ${props => props.primary ? '#8b5cf6' : 'transparent'};
+    color: #ffffff;
+    border: 1px solid ${props => props.primary ? '#8b5cf6' : '#333'};
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover:not(:disabled) {
+        background: ${props => props.primary ? '#7c3aed' : 'rgba(139, 92, 246, 0.1)'};
+        border-color: #8b5cf6;
+    }
+    
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
 `;
 
 const ButtonText = styled.span`
-  font-size: 14px;
-  font-weight: 600;
-  color: #ffffff;
+    font-size: 14px;
+    font-weight: 500;
+    color: #ffffff;
 `;
 
 const LoadingText = styled.p`
-  font-size: 16px;
-  color: #8b949e;
-  text-align: center;
-  margin: 16px 0 0 0;
-  font-weight: 400;
+    font-size: 14px;
+    color: #666;
+    text-align: center;
+    margin: 16px 0 0 0;
 `;
 
 const AIDraftPage = () => {
@@ -232,7 +230,7 @@ const AIDraftPage = () => {
                     <SectionTitle>AI Draft Generator</SectionTitle>
                     
                     <PromptInput
-                        placeholder="Describe the pixel art you want to create... (e.g., 'A cute cat')"
+                        placeholder="Describe the pixel art you want to create..."
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
                     />
@@ -250,7 +248,7 @@ const AIDraftPage = () => {
                     
                     <PreviewArea>
                         {isGenerating ? (
-                            <PreviewText>Generating your AI draft...</PreviewText>
+                            <PreviewText>Generating...</PreviewText>
                         ) : error ? (
                             <PreviewText style={{ color: '#ef4444' }}>{error}</PreviewText>
                         ) : generatedImage ? (
@@ -261,8 +259,8 @@ const AIDraftPage = () => {
                                     width: 'auto', 
                                     height: 'auto', 
                                     maxWidth: '80%', 
-                                    maxHeight: '80%', 
-                                    borderRadius: '8px',
+                                    maxHeight: '80%',
+                                    borderRadius: '6px',
                                     objectFit: 'contain'
                                 }}
                                 onError={(e) => {
@@ -270,7 +268,7 @@ const AIDraftPage = () => {
                                 }}
                             />
                         ) : (
-                            <PreviewText>Your generated image will appear here</PreviewText>
+                            <PreviewText>Generated image will appear here</PreviewText>
                         )}
                     </PreviewArea>
                     

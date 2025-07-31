@@ -11,7 +11,7 @@ class Artwork extends Model {
             proposal_id: { type: DataTypes.STRING(100), allowNull: true },
             status: { type: DataTypes.ENUM('pending', 'reviewing', 'approved', 'rejected', 'voting', 'minted'), defaultValue: 'pending'},
             token_id: { type: DataTypes.INTEGER, allowNull: true },
-            google_id_fk: { type: DataTypes.STRING(50), allowNull: false }
+            user_id_fk: { type: DataTypes.INTEGER, allowNull: false }
         }, {
             sequelize,
             timestamps: true,
@@ -23,7 +23,7 @@ class Artwork extends Model {
     }
 
     static associate(models) {
-        models.Artwork.belongsTo(models.User, { foreignKey: 'google_id_fk', targetKey: 'google_id' });
+        models.Artwork.belongsTo(models.User, { foreignKey: 'user_id_fk', targetKey: 'id' });
         models.Artwork.hasOne(models.Proposal, { foreignKey: 'artwork_id_fk', sourceKey: 'id' });
     }
 }
