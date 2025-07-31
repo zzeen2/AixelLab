@@ -357,76 +357,62 @@ const Header = () => {
         setIsMetaMaskLoading(true);
         
         try {
-            // 1. MetaMask 연결 확인
+            // 메타마스크 연결 확인
             if (typeof window.ethereum === 'undefined') {
-                alert('MetaMask가 설치되어 있지 않습니다.');
+                alert('MetaMask is not installed.');
                 return;
             }
 
-            // 2. 계정 연결 요청
+            // 계정 연결 요청
             const accounts = await window.ethereum.request({
                 method: 'eth_requestAccounts'
             });
             
             if (accounts.length === 0) {
-                alert('MetaMask에서 계정을 선택해주세요.');
+                alert('Please select an account in MetaMask.');
                 return;
             }
 
             const walletAddress = accounts[0];
-            console.log('연결된 지갑 주소:', walletAddress);
+            console.log('연결된 지갑 주소', walletAddress);
 
-            // 3. 서버에서 서명할 메시지 요청
+            // 서버에서 서명할 메시지 요청
             const messageResponse = await requestMetaMaskMessage(walletAddress);
             
             if (!messageResponse.success) {
-                alert('서명 메시지 생성에 실패했습니다.');
+                alert('Signature message generation failed.');
                 return;
             }
 
             const message = messageResponse.message;
-            console.log('서명할 메시지:', message);
+            // console.log('서명할 메시지:', message);
 
-            // 4. 사용자에게 서명 요청
+            // 사용자에게 서명 요청
             const signature = await window.ethereum.request({
                 method: 'personal_sign',
                 params: [message, walletAddress]
             });
 
-            console.log('서명 완료:', signature);
+            console.log('서명 완료', signature);
 
-            // 5. 서버에 서명 검증 요청 (prompt 제거됨)
             const verifyResponse = await verifyMetaMaskSignature(
                 walletAddress, 
                 signature
             );
 
             if (verifyResponse.success) {
-                // 6. 로그인 성공 - 사용자 정보 저장
                 const userData = verifyResponse.user;
                 
                 localStorage.setItem('userInfo', JSON.stringify(userData));
                 setUserInfo(userData);
                 setShowLoginModal(false);
                 
-                alert(`환영합니다, ${userData.display_name}님!`);
-                
-                // 페이지 새로고침으로 상태 완전 동기화
                 window.location.reload();
             } else {
-                alert('로그인에 실패했습니다: ' + verifyResponse.message);
+                alert('Login failed. Please try again in a moment');
             }
-
         } catch (error) {
             console.error('MetaMask 로그인 오류:', error);
-            
-            if (error.code === 4001) {
-                alert('사용자가 서명을 거부했습니다.');
-            } else if (error.message && error.message.includes('User rejected')) {
-                alert('사용자가 연결을 거부했습니다.');
-            } else {
-                alert('MetaMask 로그인 중 오류가 발생했습니다.');
-            }
         } finally {
             setIsMetaMaskLoading(false);
         }
@@ -444,7 +430,7 @@ const Header = () => {
             });
             
             if (response.ok) {
-                // 로컬 스토리지 정리
+                // 로컬 스토리지 삭제
                 localStorage.removeItem('userInfo');
                 setUserInfo(null);
                 setShowProfileModal(false);
