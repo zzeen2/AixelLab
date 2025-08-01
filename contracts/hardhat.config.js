@@ -2,7 +2,7 @@ require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
 
 module.exports = {
-  solidity: "0.8.30",
+  solidity: "0.8.28",
   paths: {
     sources: "./contracts",
     cache: "./cache",

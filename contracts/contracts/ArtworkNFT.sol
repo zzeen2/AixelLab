@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.28;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -27,9 +27,9 @@ contract ArtworkNFT is ERC721URIStorage, Ownable{
 
     // 승인된 작품 민팅 > 백엔드에서 조건 만족시 민팅
     function mintApprovedArtwork(address artist, uint256 proposalId, string memory _tokenURI, uint voteCount) external onlyOwner returns (uint) { 
-        require(!proposalMinted[proposalId]);
-        require(artist != address(0));
-        require(bytes(_tokenURI).length > 0);
+        require(!proposalMinted[proposalId], "Already minted");
+        require(artist != address(0), "Invalid artist");
+        require(bytes(_tokenURI).length > 0, "Empty URI");
 
         uint _nextTokenId = tokenId;
 
