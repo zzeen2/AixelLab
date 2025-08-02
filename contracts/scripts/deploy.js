@@ -7,9 +7,9 @@ async function test () {
 
     const ArtworkNFT = await hardhat.ethers.getContractFactory("ArtworkNFT"); //ABI와 바이트코드를 기반으로 배포준비
     // console.log("ArtworkNFT", ArtworkNFT);
-    const artworkNFT = await ArtworkNFT.deploy(); // 컨트랙트를 블록체인에 배포하는 트랜잭션 생성히고 배포
-    await artworkNFT.waitForDeployment();
-    console.log("ArtworkNFT 배포된 주소", await artworkNFT.getAddress());
+    const nftContract = await ArtworkNFT.deploy(); // 컨트랙트를 블록체인에 배포하는 트랜잭션 생성히고 배포
+    await nftContract.waitForDeployment();
+    console.log("ArtworkNFT 배포된 주소", await nftContract.getAddress());
 }
 
 test().catch((error) => console.log(error))
