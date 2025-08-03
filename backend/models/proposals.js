@@ -13,7 +13,14 @@ class Proposal extends Model {
             result_approved: { type: DataTypes.BOOLEAN, allowNull: true },
             result_votes_for: { type: DataTypes.INTEGER, defaultValue: 0 },
             result_votes_against: { type: DataTypes.INTEGER, defaultValue: 0 },
-            result_total_votes: { type: DataTypes.INTEGER, defaultValue: 0 }
+            result_total_votes: { type: DataTypes.INTEGER, defaultValue: 0 },
+            
+            // NFT 민팅 관련 필드
+            nft_minted: { type: DataTypes.BOOLEAN, defaultValue: false },
+            nft_token_id: { type: DataTypes.INTEGER, allowNull: true },
+            nft_transaction_hash: { type: DataTypes.STRING(66), allowNull: true },
+            minted_at: { type: DataTypes.DATE, allowNull: true },
+            artist_wallet_address: { type: DataTypes.STRING(42), allowNull: true }
         }, {
             sequelize,
             timestamps: true,
@@ -25,10 +32,10 @@ class Proposal extends Model {
     }
 
     static associate(models) {
-        models.Proposal.belongsTo(models.Artwork, { foreignKey: 'artwork_id_fk', targetKey: 'id' });
-        models.Proposal.belongsTo(models.User, { foreignKey: 'created_by', targetKey: 'id' });
-        models.Proposal.hasMany(models.Vote, { foreignKey: 'proposal_id_fk', sourceKey: 'id' });
+        models.Proposal.belongsTo(models.Artwork, { foreignKey: 'artwork_id_fk', targetKey: 'id', as: 'artwork' });
+        models.Proposal.belongsTo(models.User, { foreignKey: 'created_by', targetKey: 'id', as: 'author' });
+        models.Proposal.hasMany(models.Vote, { foreignKey: 'proposal_id_fk', sourceKey: 'id', as: 'votes' });
     }
 }
 
-module.exports = Proposal;
+module.exports = Proposal; 

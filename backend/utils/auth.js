@@ -1,11 +1,5 @@
 const db = require('../models');
 
-/**
- * 현재 요청의 사용자 정보를 가져옵니다
- * @param {Object} req - Express request 객체
- * @returns {Object} { user, userId, loginType, error }
- */
-
 const getCurrentUser = async (req) => {
     try {
         let currentUser = null;
