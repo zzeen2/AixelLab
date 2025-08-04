@@ -36,3 +36,44 @@ export const submitVote = async( voteId, voteType) => {
         console.error(error)
     }
 }
+
+// 민팅 대기 목록 조회
+export const getPendingMints = async () => {
+    try {
+        const response = await axios.get(`http://localhost:4000/voting/user/pending-mints`, {
+            withCredentials: true
+        });
+        return response.data;
+    } catch (error) {
+        console.error('민팅 대기 목록 조회 실패:', error);
+        throw error;
+    }
+}
+
+// 민팅 실행
+export const executeMinting = async (proposalId, password) => {
+    try {
+        const response = await axios.post(`http://localhost:4000/voting/${proposalId}/mint`, {
+            password
+        }, {
+            withCredentials: true
+        });
+        return response.data;
+    } catch (error) {
+        console.error('민팅 실행 실패:', error);
+        throw error;
+    }
+}
+
+// 민팅 상태 조회
+export const getMintingStatus = async (proposalId) => {
+    try {
+        const response = await axios.get(`http://localhost:4000/voting/${proposalId}/minting-status`, {
+            withCredentials: true
+        });
+        return response.data;
+    } catch (error) {
+        console.error('민팅 상태 조회 실패:', error);
+        throw error;
+    }
+}

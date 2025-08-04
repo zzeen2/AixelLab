@@ -15,8 +15,13 @@ const checkVoteThreshold = async (proposalId) => {
         if (proposal.nft_minted) { return { success: false, error: "이미 민팅된 nft입니다." }}
 
         // 투표 수 확인
-        const voteCount = await db.Vote.count({where: { proposal_id_fk: proposalId}});
-        console.log(`Current vote count: ${voteCount}, Threshold: ${VOTE_THRESHOLD}`);
+        const voteCount = await db.Vote.count({
+            where: { 
+                proposal_id_fk: proposalId,
+                vote_type: 'for'
+            }
+        });
+        console.log(`Current for vote count: ${voteCount}, Threshold: ${VOTE_THRESHOLD}`);
 
         // 임계점 여부 확인
         if (voteCount < VOTE_THRESHOLD) {
@@ -78,7 +83,12 @@ const getMintingStatus = async (proposalId) => {
         const proposal = await db.Proposal.findByPk(proposalId);
         if (!proposal) return {success: false, error: "proposalId를 찾을 수 없습니다."};
 
-        const voteCount = await db.Vote.count({where: { proposal_id_fk: proposalId } });
+        const voteCount = await db.Vote.count({
+            where: { 
+                proposal_id_fk: proposalId,
+                vote_type: 'for'
+            }
+        });
 
         return {
             success: true,

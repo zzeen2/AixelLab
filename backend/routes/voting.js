@@ -298,4 +298,75 @@ router.post('/:id/mint', isAuthenticated, async (req, res) => {
     }
 });
 
+// 사용자의 민팅 대기 목록 조회
+router.get('/user/pending-mints', isAuthenticated, async (req, res) => {
+    try {
+        const { user: currentUser, userId, loginType, error } = await getCurrentUser(req);
+        
+        if (error) {
+            return res.status(401).json({ error: "로그인이 필요합니다." });
+        }
+
+        // 사용자가 생성한 제안 중 민팅 준비 완료된 것들 조회
+        const pendingMints = await db.Proposal.findAll({
+            where: {
+                created_by: userId,
+                nft_minted: false // 아직 민팅되지 않은 것들
+            },
+            include: [
+                {
+                    model: db.Artwork,
+                    as: 'artwork',
+                    attributes: ['title', 'description', 'image_ipfs_uri'],
+                    required: false
+                },
+                {
+                    model: db.Vote,
+                    as: 'votes',
+                    attributes: ['vote_type'],
+                    required: false
+                }
+            ],
+            order: [['createdAt', 'DESC']]
+        });
+
+        // 민팅 준비 상태 체크
+        const mintingReadyProposals = [];
+        
+        for (const proposal of pendingMints) {
+            const voteCount = proposal.votes ? proposal.votes.filter(v => v.vote_type === 'for').length : 0;
+            const VOTE_THRESHOLD = process.env.VOTE_THRESHOLD || 10;
+            
+            if (voteCount >= VOTE_THRESHOLD) {
+                const votesFor = proposal.votes ? proposal.votes.filter(v => v.vote_type === 'for').length : 0;
+                const votesAgainst = proposal.votes ? proposal.votes.filter(v => v.vote_type === 'against').length : 0;
+                
+                mintingReadyProposals.push({
+                    id: proposal.id,
+                    title: proposal.artwork?.title || 'Untitled',
+                    description: proposal.artwork?.description || '',
+                    imageUrl: proposal.artwork?.image_ipfs_uri || '',
+                    status: proposal.status,
+                    votesFor,
+                    votesAgainst,
+                    totalVotes: votesFor + votesAgainst,
+                    threshold: VOTE_THRESHOLD,
+                    mintingReady: true,
+                    createdAt: proposal.createdAt
+                });
+            }
+        }
+
+        res.json({ 
+            success: true, 
+            pendingMints: mintingReadyProposals,
+            count: mintingReadyProposals.length
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "민팅 대기 목록 조회에 실패했습니다." });
+    }
+});
+
 module.exports = router; 

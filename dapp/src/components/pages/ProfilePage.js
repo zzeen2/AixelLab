@@ -4,6 +4,7 @@ import MainTemplate from '../templates/MainTemplate';
 import UserAvatar from '../atoms/ui/UserAvatar';
 import { getUserArtworks, getUserStats } from '../../api/user';
 import { getWalletStatus, createWallet } from '../../api/auth';
+import { getPendingMints, executeMinting } from '../../api/voting';
 
 const PageContainer = styled.div`
     padding: 24px 0;
@@ -310,6 +311,49 @@ const ProfilePage = () => {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isCreatingWallet, setIsCreatingWallet] = useState(false);
+    
+    // 민팅 관련 state
+    const [pendingMints, setPendingMints] = useState([]);
+    const [showMintingModal, setShowMintingModal] = useState(false);
+    const [selectedProposal, setSelectedProposal] = useState(null);
+    const [mintingPassword, setMintingPassword] = useState('');
+    const [isMinting, setIsMinting] = useState(false);
+
+    // 민팅 대기 목록 조회
+    const fetchPendingMints = async () => {
+        try {
+            const response = await getPendingMints();
+            if (response.success) {
+                setPendingMints(response.pendingMints);
+            }
+        } catch (error) {
+            console.error('민팅 대기 목록 조회 실패:', error);
+        }
+    };
+
+    // 민팅 실행
+    const handleMinting = async () => {
+        if (!mintingPassword) {
+            alert('비밀번호를 입력해주세요.');
+            return;
+        }
+        
+        setIsMinting(true);
+        try {
+            const response = await executeMinting(selectedProposal.id, mintingPassword);
+            if (response.success) {
+                alert('NFT 민팅이 성공적으로 완료되었습니다!');
+                setShowMintingModal(false);
+                setMintingPassword('');
+                setSelectedProposal(null);
+                await fetchPendingMints(); // 목록 새로고침
+            }
+        } catch (error) {
+            alert('민팅에 실패했습니다: ' + (error.response?.data?.error || error.message));
+        } finally {
+            setIsMinting(false);
+        }
+    };
 
     // 지갑 상태 조회
     const fetchWalletStatus = async () => {
@@ -428,6 +472,13 @@ const ProfilePage = () => {
                     });
                 }
 
+                // 민팅 대기 목록 조회
+                try {
+                    await fetchPendingMints();
+                } catch (error) {
+                    console.error('민팅 대기 목록 조회 실패:', error);
+                }
+
             } catch (error) {
                 console.error('사용자 정보 조회 실패:', error);
             } finally {
@@ -539,6 +590,12 @@ const ProfilePage = () => {
                             created ({artworks.length})
                         </Tab>
                         <Tab 
+                            active={activeTab === 'minting'} 
+                            onClick={() => setActiveTab('minting')}
+                        >
+                            minting ({pendingMints.length})
+                        </Tab>
+                        <Tab 
                             active={activeTab === 'collected'} 
                             onClick={() => setActiveTab('collected')}
                         >
@@ -586,6 +643,48 @@ const ProfilePage = () => {
                             ) : (
                                 <EmptyState>
                                     <div>작품이 없습니다</div>
+                                </EmptyState>
+                            )}
+                        </>
+                    )}
+
+                    {activeTab === 'minting' && (
+                        <>
+                            {pendingMints.length > 0 ? (
+                                <ArtworkGrid>
+                                    {pendingMints.map((proposal) => (
+                                        <ArtworkCard key={proposal.id}>
+                                            <ArtworkImage 
+                                                src={proposal.imageUrl} 
+                                                alt={proposal.title}
+                                                onError={(e) => {
+                                                    e.target.src = '/default-artwork.png';
+                                                }}
+                                            />
+                                            <ArtworkInfo>
+                                                <ArtworkTitle>{proposal.title}</ArtworkTitle>
+                                                <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+                                                    투표: {proposal.votesFor}/{proposal.threshold} (민팅 준비 완료)
+                                                </div>
+                                                <CreateWalletButton 
+                                                    onClick={() => {
+                                                        setSelectedProposal(proposal);
+                                                        setShowMintingModal(true);
+                                                    }}
+                                                    style={{ width: '100%', marginTop: '8px' }}
+                                                >
+                                                    NFT 민팅하기
+                                                </CreateWalletButton>
+                                            </ArtworkInfo>
+                                        </ArtworkCard>
+                                    ))}
+                                </ArtworkGrid>
+                            ) : (
+                                <EmptyState>
+                                    <div>민팅 대기 목록이 없습니다</div>
+                                    <div style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
+                                        작품이 10표 이상 받으면 민팅할 수 있습니다
+                                    </div>
                                 </EmptyState>
                             )}
                         </>
@@ -651,6 +750,45 @@ const ProfilePage = () => {
                                 disabled={isCreatingWallet}
                             >
                                 {isCreatingWallet ? '생성 중...' : '지갑 생성'}
+                            </ModalButton>
+                        </ModalButtons>
+                    </ModalContent>
+                </Modal>
+            )}
+
+            {/* 민팅 모달 */}
+            {showMintingModal && selectedProposal && (
+                <Modal>
+                    <ModalContent>
+                        <ModalTitle>NFT 민팅</ModalTitle>
+                        <p style={{ color: '#999', fontSize: '14px', marginBottom: '16px' }}>
+                            민팅하려면 지갑 비밀번호를 입력해주세요.
+                        </p>
+                        
+                        <PasswordInput
+                            type="password"
+                            placeholder="민팅 비밀번호"
+                            value={mintingPassword}
+                            onChange={(e) => setMintingPassword(e.target.value)}
+                        />
+                        
+                        <ModalButtons>
+                            <ModalButton 
+                                className="secondary" 
+                                onClick={() => {
+                                    setShowMintingModal(false);
+                                    setMintingPassword('');
+                                    setSelectedProposal(null);
+                                }}
+                            >
+                                취소
+                            </ModalButton>
+                            <ModalButton 
+                                className="primary" 
+                                onClick={handleMinting}
+                                disabled={isMinting}
+                            >
+                                {isMinting ? '민팅 중...' : 'NFT 민팅하기'}
                             </ModalButton>
                         </ModalButtons>
                     </ModalContent>
