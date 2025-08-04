@@ -3,8 +3,10 @@ const router = express.Router();
 const { isAuthenticated } = require('../middleware/auth');
 const { getCurrentUser } = require('../utils/auth');
 const db = require("../models");
-const { checkVoteAndMint, getMintingStatus } = require('../services/mintingService');
+const { checkVoteThreshold, getMintingStatus } = require('../services/mintingService');
 const contractManager = require('../utils/contractManager');
+const { verifyPassword } = require('../utils/passwordValidator');
+const { ethers } = require('ethers');
 
 // 투표 목록 가져오기
 router.get('/', async (req, res) => {
@@ -146,15 +148,17 @@ router.post('/:id/vote', isAuthenticated, async (req, res) => {
             vote_weight: 1 
         });
 
-        // 자동 민팅 체크 
+        // 투표 임계점 체크 (민팅 준비 상태 확인)
         setImmediate(async () => {
             try {
-                await checkVoteAndMint(voteId);
+                const result = await checkVoteThreshold(voteId);
+                if (result.success && result.mintingReady) {
+                    console.log(`Proposal ${voteId} is ready for minting!`);
+                }
             } catch (error) {
                 console.error(error);
             }
         });
-        
         res.json({ message: "투표 제출이 완료되었습니다." });
         
     } catch (error) {
@@ -175,14 +179,100 @@ router.get('/:id/minting-status', async (req, res) => {
     }
 });
 
-// 컨트랙트 상태 확인
-router.get('/contract-status', async (req, res) => {
+
+
+// NFT 민팅 실행
+router.post('/:id/mint', isAuthenticated, async (req, res) => {
     try {
-        const status = await contractManager.getNetworkStatus();
-        res.json({ status });
+        const { id: proposalId } = req.params;
+        const { password } = req.body;
+        const currentUser = await getCurrentUser(req);
+
+        if (!password) return res.status(400).json({ error: "비밀번호를 입력해주세요."});
+
+        // 제안 정보 조회
+        const proposal = await db.Proposal.findByPk(proposalId, {
+            include: [{ model: db.User, as: 'author' }]
+        });
+
+        if (!proposal) return res.status(404).json({ error: "해당 제안을 찾을 수 없습니다."});
+
+        // 작가 권한 확인
+        if (proposal.author.id !== currentUser.id) {
+            return res.status(403).json({ error: "작품 작가만 민팅을 실행할 수 있습니다."});
+        }
+
+        // 이미 민팅되었는지 확인
+        if (proposal.nft_minted) {
+            return res.status(400).json({ error: "이미 민팅된 작품입니다."});
+        }
+
+        // Google 사용자 비밀번호 검증
+        if (currentUser.login_type === 'google') {
+            if (!currentUser.password_hash) {
+                return res.status(400).json({ error: "지갑이 생성되지 않았습니다. 먼저 지갑을 생성해주세요."});
+            }
+
+            const isPasswordValid = await verifyPassword(password, currentUser.password_hash);
+            if (!isPasswordValid) {
+                return res.status(401).json({ error: "비밀번호가 일치하지 않습니다." });
+            }
+        }
+
+        // 투표 임계점 재확인
+        const thresholdResult = await checkVoteThreshold(proposalId);
+        if (!thresholdResult.success || !thresholdResult.mintingReady) {
+            return res.status(400).json({ error: "아직 민팅 조건이 충족되지 않았습니다." });
+        }
+
+        // 작가 지갑 주소 결정
+        let artistAddress = thresholdResult.artistAddress;
+
+        // Google 사용자의 경우 EOA 기반 트랜잭션 지갑 생성
+        let transactionWallet = null;
+        if (currentUser.login_type === 'google') {
+            const seedString = `aixellab_${currentUser.google_id}_${password}`;
+            const seed = ethers.keccak256(ethers.toUtf8Bytes(seedString));
+            transactionWallet = new ethers.Wallet(seed);
+            
+            // Smart Account 주소 사용
+            artistAddress = thresholdResult.artistAddress;
+        }
+
+        // 민팅 실행
+        const mintResult = await contractManager.mintApprovedArtwork(
+            artistAddress,
+            proposalId,
+            proposal.artwork_url,
+            thresholdResult.voteCount,
+            transactionWallet 
+        );
+
+        if (!mintResult.success) {
+            return res.status(500).json({ error: "민팅 실행에 실패했습니다." });
+        }
+
+        // DB 업데이트
+        await proposal.update({
+            nft_minted: true,
+            nft_token_id: mintResult.tokenId,
+            nft_transaction_hash: mintResult.transactionHash,
+            minted_at: new Date(),
+            artist_wallet_address: artistAddress
+        });
+
+        res.json({
+            success: true,
+            message: "NFT 민팅이 성공적으로 완료되었습니다!",
+            tokenId: mintResult.tokenId,
+            transactionHash: mintResult.transactionHash,
+            artistAddress: artistAddress,
+            voteCount: thresholdResult.voteCount
+        });
+
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "컨트랙트 상태 조회에 실패했습니다." });
+        console.error('민팅 실행 실패:', error);
+        res.status(500).json({ error: "민팅 실행 중 오류가 발생했습니다." });
     }
 });
 

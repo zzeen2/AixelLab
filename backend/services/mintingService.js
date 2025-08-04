@@ -3,13 +3,11 @@ const db = require('../models');
 
 const VOTE_THRESHOLD = process.env.VOTE_THRESHOLD || 10;
 
-// 투표 임계점 체크 및 자동 민팅
-const checkVoteAndMint = async (proposalId) => {
+// 투표 임계점 체크 (민팅 준비 상태 확인)
+const checkVoteThreshold = async (proposalId) => {
     try {
-        console.log(proposalId);
-
         // 제안 정보 조회
-        const proposal = await db.Proposal.findByPk(proposalId, { include: [{ model: User, as: 'author' }]});
+        const proposal = await db.Proposal.findByPk(proposalId, { include: [{ model: db.User, as: 'author' }]});
 
         if (!proposal) return { success: false, error: "proposalId를 찾을 수 없습니다." };
 
@@ -18,36 +16,37 @@ const checkVoteAndMint = async (proposalId) => {
 
         // 투표 수 확인
         const voteCount = await db.Vote.count({where: { proposal_id_fk: proposalId}});
-        console.log(voteCount);
+        console.log(`Current vote count: ${voteCount}, Threshold: ${VOTE_THRESHOLD}`);
 
         // 임계점 여부 확인
-        if (voteCount < VOTE_THRESHOLD) {return { success: false, error: "임계점에 도달하지 않았습니다." }}
+        if (voteCount < VOTE_THRESHOLD) {
+            return { 
+                success: false, 
+                error: "임계점에 도달하지 않았습니다.",
+                voteCount,
+                threshold: VOTE_THRESHOLD,
+                eligible: false
+            };
+        }
 
         // 작가 지갑 주소 결정
         const artistAddress = await getArtistWalletAddress(proposal.author);
-        if (!artistAddress) return { success: false, error: "작가의 지갑 주소를 찾을 수 없습니다." };
+        if (!artistAddress) return { success: false, error: "작가의 지갑주소를 찾을 수 없습니다." };
 
-        // 민팅 실행
-        const mintResult = await contractManager.mintApprovedArtwork(
+        // 민팅 준비 완료 상태
+        return {
+            success: true, 
+            mintingReady: true,
+            voteCount, 
+            threshold: VOTE_THRESHOLD,
             artistAddress,
-            proposalId,
-            proposal.artwork_url, // IPFS URL을 tokenURI로 사용
-            voteCount
-        );
-
-        // DB 업데이트
-        await proposal.update({
-            nft_minted: true,
-            nft_token_id: mintResult.tokenId,
-            nft_transaction_hash: mintResult.transactionHash,
-            minted_at: new Date(),
-            artist_wallet_address: artistAddress
-        });
-
-        return {success: true, tokenId: mintResult.tokenId, voteCount, transactionHash: mintResult.transactionHash, artistAddress}
+            proposalId: proposalId,
+            eligible: true,
+        };
 
     } catch (error) {
         console.error(error);
+        return { success: false, error: "임계점 체크 중 오류가 발생했습니다." };
     }
 };
 
@@ -55,24 +54,21 @@ const checkVoteAndMint = async (proposalId) => {
 const getArtistWalletAddress = async (user) => {
     try {
         // MetaMask 사용자인 경우
-        if (user.wallet_address) {return user.wallet_address;}
+        if (user.wallet_address && user.wallet_address !== '0x0000000000000000000000000000000000000000') {
+            return user.wallet_address;
+        }
 
-        // Google 사용자인 경우
-        if (user.google_id) {
-            
-            //TODO 사용자별 고유한 방식으로 EOA 생성
-            const { ethers } = require('ethers');
-            const tempEOA = ethers.Wallet.createRandom().address;
-            
-            const accountResult = await contractManager.createGoogleUserAccount(tempEOA);
-            
+        // Google 사용자인 경우 - 스마트 계정 생성/조회
+        if (user.google_id && user.eoa_address) {
+            const accountResult = await contractManager.createGoogleUserAccount(user.eoa_address);
             if (accountResult.success) {
                 return accountResult.accountAddress;
             }
         }
         return null;
     } catch (error) {
-        console.error(error);
+        console.error('Error in getArtistWalletAddress:', error);
+        return null;
     }
 };
 
@@ -85,6 +81,7 @@ const getMintingStatus = async (proposalId) => {
         const voteCount = await db.Vote.count({where: { proposal_id_fk: proposalId } });
 
         return {
+            success: true,
             proposalId,
             voteCount,
             threshold: VOTE_THRESHOLD,
@@ -93,12 +90,14 @@ const getMintingStatus = async (proposalId) => {
             transactionHash: proposal.nft_transaction_hash,
             mintedAt: proposal.minted_at,
             artistWalletAddress: proposal.artist_wallet_address,
-            eligible: voteCount >= VOTE_THRESHOLD && !proposal.nft_minted
+            eligible: voteCount >= VOTE_THRESHOLD && !proposal.nft_minted,
+            mintingReady: voteCount >= VOTE_THRESHOLD && !proposal.nft_minted
         };
 
     } catch (error) {
         console.error(error);
+        return { success: false, error: "민팅 상태 조회 중 오류가 발생했습니다." };
     }
 };
 
-module.exports = {checkVoteAndMint, getMintingStatus,VOTE_THRESHOLD }; 
+module.exports = { checkVoteThreshold, getMintingStatus, VOTE_THRESHOLD }; 

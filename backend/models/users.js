@@ -27,6 +27,19 @@ class User extends Model {
                 allowNull: false,
                 unique: true
             },
+            eoa_address: {
+                type: DataTypes.STRING(42),
+                allowNull: true,
+                unique: true
+            },
+            password_hash: {
+                type: DataTypes.STRING(255),
+                allowNull: true
+            },
+            wallet_created: {
+                type: DataTypes.BOOLEAN,
+                defaultValue: false
+            },
             login_type: {
                 type: DataTypes.ENUM('google', 'metamask'),
                 allowNull: false,

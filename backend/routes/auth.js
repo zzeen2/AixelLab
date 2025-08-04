@@ -4,6 +4,10 @@ const router = express.Router();
 const db = require('../models');
 const { ethers } = require('ethers');
 const { generateRandomUsername, generateRandomColor } = require('../utils/randomGenerator');
+const { validatePassword, hashPassword, verifyPassword } = require('../utils/passwordValidator');
+const { createPasswordBasedEOA } = require('../utils/walletGenerator');
+const { isAuthenticated } = require('../middleware/auth');
+const { getCurrentUser } = require('../utils/auth');
 
 // Google 로그인
 router.get('/google', passport.authenticate('google', {
@@ -15,7 +19,7 @@ router.get('/google/callback',
     passport.authenticate('google', { failureRedirect: 'http://localhost:3000/login' }),
     async (req, res) => {
         try {
-            // DB에 사용자 저장/업데이트
+
             const [user, created] = await db.User.findOrCreate({
                 where: { google_id: req.user.id },
                 defaults: {
@@ -24,7 +28,8 @@ router.get('/google/callback',
                     wallet_address: req.user.walletAddress || '0x0000000000000000000000000000000000000000',
                     login_type: 'google',
                     is_eligible_voter: true,
-                    vote_weight: 0
+                    vote_weight: 0,
+                    wallet_created: false
                 }
             });
             
@@ -34,7 +39,6 @@ router.get('/google/callback',
                     display_name: req.user.name,
                 });
             }
-            
             res.redirect('http://localhost:3000/');
         } catch (error) {
             console.error(error);
@@ -56,15 +60,12 @@ router.post('/metamask/message', async (req, res) => {
         const timestamp = Date.now();
         const message = `AixelLab에 로그인하려고 합니다.\n\n지갑 주소: ${walletAddress}\n타임스탬프: ${timestamp}\n\n이 서명은 인증 목적으로만 사용됩니다.`;
         
-        // 세션에 메시지와 주소 저장 (5분 후 만료)
+        // 세션에 메시지와 주소 저장 
         req.session.authMessage = message;
         req.session.authWalletAddress = walletAddress;
         req.session.authTimestamp = timestamp;
         
-        res.json({
-            success: true,
-            message: message
-        });
+        res.json({success: true,message: message});
     } catch (error) {
         console.error('메시지 생성 실패:', error);
         res.status(500).json({ success: false, message: '메시지 생성 실패' });
@@ -247,6 +248,139 @@ router.get('/logout', (req, res) => {
     delete req.session.authTimestamp;
     
     res.json({ success: true, message: '로그아웃 완료' });
+});
+
+// 지갑 상태 확인 API
+router.get('/wallet-status', isAuthenticated, async (req, res) => {
+    try {
+        const { user: currentUser, userId, loginType, error } = await getCurrentUser(req);
+        
+        if (error) {
+            return res.status(401).json({ success: false, message: '로그인이 필요합니다.' });
+        }
+
+        const walletInfo = {
+            walletCreated: currentUser.wallet_created,
+            eoaAddress: currentUser.wallet_created ? currentUser.eoa_address : null,
+            loginType: currentUser.login_type
+        };
+
+        res.json({ success: true, wallet: walletInfo });
+    } catch (error) {
+        console.error('지갑 상태 조회 실패:', error);
+        res.status(500).json({ success: false, message: '지갑 상태 조회에 실패했습니다.' });
+    }
+});
+
+// 지갑 생성 API
+router.post('/create-wallet', isAuthenticated, async (req, res) => {
+    try {
+        const { user: currentUser, userId, loginType, error } = await getCurrentUser(req);
+        
+        if (error) {
+            return res.status(401).json({ success: false, message: '로그인이 필요합니다.' });
+        }
+
+        // Google 사용자만 가능
+        if (currentUser.login_type !== 'google') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Google 로그인 사용자만 지갑을 생성할 수 있습니다.' 
+            });
+        }
+
+        // 이미 지갑이 생성된 경우
+        if (currentUser.wallet_created) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '이미 지갑이 생성되었습니다.' 
+            });
+        }
+
+        const { password } = req.body;
+
+        // 비밀번호 검증
+        const validation = validatePassword(password);
+        if (!validation.isValid) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '비밀번호 조건을 만족하지 않습니다.',
+                errors: validation.errors
+            });
+        }
+
+        // EOA 생성
+        const eoaAddress = createPasswordBasedEOA(currentUser.google_id, password);
+
+        // 비밀번호 해싱
+        const hashedPassword = await hashPassword(password);
+
+        // DB 업데이트
+        await currentUser.update({
+            eoa_address: eoaAddress,
+            password_hash: hashedPassword,
+            wallet_created: true,
+            wallet_created_at: new Date()
+        });
+
+        console.log(`✅ 지갑 생성 완료: ${currentUser.display_name} (${eoaAddress.slice(0, 8)}...)`);
+
+        res.json({ 
+            success: true, 
+            message: '지갑이 성공적으로 생성되었습니다.',
+            eoaAddress: eoaAddress
+        });
+
+    } catch (error) {
+        console.error('지갑 생성 실패:', error);
+        res.status(500).json({ success: false, message: '지갑 생성에 실패했습니다.' });
+    }
+});
+
+// 비밀번호 검증 API (민팅 시 사용)
+router.post('/verify-wallet-password', isAuthenticated, async (req, res) => {
+    try {
+        const { user: currentUser, userId, loginType, error } = await getCurrentUser(req);
+        
+        if (error) {
+            return res.status(401).json({ success: false, message: '로그인이 필요합니다.' });
+        }
+
+        if (!currentUser.wallet_created) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '생성된 지갑이 없습니다.' 
+            });
+        }
+
+        const { password } = req.body;
+
+        if (!password) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '비밀번호가 필요합니다.' 
+            });
+        }
+
+        // 비밀번호 검증
+        const isValid = await verifyPassword(password, currentUser.password_hash);
+
+        if (!isValid) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '비밀번호가 일치하지 않습니다.' 
+            });
+        }
+
+        res.json({ 
+            success: true, 
+            message: '비밀번호가 확인되었습니다.'
+        });
+
+    } catch (error) {
+        console.error('비밀번호 검증 실패:', error);
+        res.status(500).json({ success: false, message: '비밀번호 검증에 실패했습니다.' });
+    }
 });
 
 module.exports = router;

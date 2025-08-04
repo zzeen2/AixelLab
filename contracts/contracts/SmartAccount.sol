@@ -50,7 +50,7 @@ contract SmartAccount {
     }
 
     // 서명 복원
-    function _recoverSigner(bytes32 _hash, bytes memory sig) internal pure returns (address) {
+    function _recoverSigner(bytes32 _hash, bytes memory sig) internal pure retu  (address) {
         (bytes32 r, bytes32 s, uint8 v) = _splitSignature(sig);
         return ecrecover(_hash, v, r, s);
     }
