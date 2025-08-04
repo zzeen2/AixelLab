@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import MainTemplate from '../templates/MainTemplate';
 import UserAvatar from '../atoms/ui/UserAvatar';
 import { getUserArtworks, getUserStats } from '../../api/user';
+import { getWalletStatus, createWallet } from '../../api/auth';
 
 const PageContainer = styled.div`
     padding: 24px 0;
@@ -57,6 +58,129 @@ const WalletAddress = styled.div`
     padding: 6px 8px;
     border: 1px solid #333;
     display: inline-block;
+    cursor: pointer;
+    transition: background 0.2s;
+    
+    &:hover {
+        background: #333;
+        color: #fff;
+    }
+`;
+
+const WalletSection = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+`;
+
+const CreateWalletButton = styled.button`
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+    
+    &:hover {
+        background: #0056b3;
+    }
+    
+    &:disabled {
+        background: #666;
+        cursor: not-allowed;
+    }
+`;
+
+const WalletStatus = styled.div`
+    font-size: 12px;
+    color: #28a745;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+`;
+
+const Modal = styled.div`
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+`;
+
+const ModalContent = styled.div`
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 24px;
+    width: 400px;
+    max-width: 90vw;
+`;
+
+const ModalTitle = styled.h2`
+    color: #ffffff;
+    margin: 0 0 16px 0;
+    font-size: 18px;
+`;
+
+const PasswordInput = styled.input`
+    width: 100%;
+    padding: 12px;
+    background: #222;
+    border: 1px solid #333;
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 14px;
+    margin-bottom: 16px;
+    
+    &:focus {
+        outline: none;
+        border-color: #007bff;
+    }
+`;
+
+const ModalButtons = styled.div`
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+`;
+
+const ModalButton = styled.button`
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    
+    &.primary {
+        background: #007bff;
+        color: white;
+        
+        &:hover {
+            background: #0056b3;
+        }
+    }
+    
+    &.secondary {
+        background: #666;
+        color: white;
+        
+        &:hover {
+            background: #555;
+        }
+    }
+    
+    &:disabled {
+        background: #444;
+        cursor: not-allowed;
+    }
 `;
 
 const StatsGrid = styled.div`
@@ -179,6 +303,85 @@ const ProfilePage = () => {
     const [artworks, setArtworks] = useState([]);
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
+    
+    // 지갑 관련 state
+    const [walletStatus, setWalletStatus] = useState(null);
+    const [showCreateWalletModal, setShowCreateWalletModal] = useState(false);
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [isCreatingWallet, setIsCreatingWallet] = useState(false);
+
+    // 지갑 상태 조회
+    const fetchWalletStatus = async () => {
+        try {
+            const response = await getWalletStatus();
+            console.log('지갑 상태 응답:', response); // 디버깅용
+            
+            // 백엔드에서 wallet 객체 안에 데이터를 보냄
+            if (response.success && response.wallet) {
+                setWalletStatus(response.wallet);
+            } else {
+                setWalletStatus(response);
+            }
+        } catch (error) {
+            console.error('지갑 상태 조회 실패:', error);
+        }
+    };
+
+    // 지갑 생성
+    const handleCreateWallet = async () => {
+        if (!password || !confirmPassword) {
+            alert('비밀번호를 입력해주세요.');
+            return;
+        }
+        
+        if (password !== confirmPassword) {
+            alert('비밀번호가 일치하지 않습니다.');
+            return;
+        }
+        
+        if (password.length < 8) {
+            alert('비밀번호는 8자 이상이어야 합니다.');
+            return;
+        }
+        
+        setIsCreatingWallet(true);
+        try {
+            const response = await createWallet(password);
+            console.log('지갑 생성 응답:', response); // 디버깅용
+            
+            if (response.success) {
+                alert('지갑이 성공적으로 생성되었습니다!');
+                setShowCreateWalletModal(false);
+                setPassword('');
+                setConfirmPassword('');
+                
+                // 지갑 상태 새로고침
+                await fetchWalletStatus();
+                
+                // 사용자 정보도 업데이트 (localStorage)
+                const currentUserInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+                const updatedUserInfo = {
+                    ...currentUserInfo,
+                    wallet_created: true,
+                    eoa_address: response.eoaAddress
+                };
+                localStorage.setItem('userInfo', JSON.stringify(updatedUserInfo));
+                setUserInfo(updatedUserInfo);
+                
+                // 지갑 상태도 즉시 업데이트
+                setWalletStatus({
+                    walletCreated: true,
+                    eoaAddress: response.eoaAddress,
+                    loginType: 'google'
+                });
+            }
+        } catch (error) {
+            alert('지갑 생성에 실패했습니다: ' + (error.response?.data?.message || error.message));
+        } finally {
+            setIsCreatingWallet(false);
+        }
+    };
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -187,6 +390,10 @@ const ProfilePage = () => {
                 const userInfo = localStorage.getItem('userInfo');
                 if (userInfo) {
                     setUserInfo(JSON.parse(userInfo));
+                    // Google 사용자인 경우 지갑 상태 조회
+                    if (JSON.parse(userInfo).login_type === 'google') {
+                        await fetchWalletStatus();
+                    }
                 }
 
                 // 실제 작품 데이터 가져오기
@@ -255,12 +462,49 @@ const ProfilePage = () => {
                                     <ProfileName>{userInfo.display_name || 'Anonymous User'}</ProfileName>
                                     <JoinedInfo>joined jul 2025</JoinedInfo>
                                     <ProfileEmail>{userInfo.email || `${userInfo.login_type || 'wallet'} user`}</ProfileEmail>
-                                    <WalletAddress>
-                                        {userInfo.wallet_address && userInfo.wallet_address !== '0x0000000000000000000000000000000000000000' 
-                                            ? `${userInfo.wallet_address.slice(0, 6)}...${userInfo.wallet_address.slice(-4)}`
-                                            : 'no wallet connected'
-                                        }
-                                    </WalletAddress>
+                                    
+                                    {/* Google 사용자의 경우 지갑 상태 표시 */}
+                                    {userInfo.login_type === 'google' ? (
+                                        <WalletSection>
+                                            {walletStatus?.walletCreated ? (
+                                                /* 지갑 생성 완료 - 주소만 표시 */
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                    <div style={{ fontSize: '12px', color: '#666' }}>지갑 주소:</div>
+                                                    <WalletAddress
+                                                        onClick={() => {
+                                                            if (walletStatus.eoaAddress) {
+                                                                navigator.clipboard.writeText(walletStatus.eoaAddress);
+                                                                alert('주소가 복사되었습니다!');
+                                                            }
+                                                        }}
+                                                        title="클릭하여 전체 주소 복사"
+                                                    >
+                                                        {walletStatus.eoaAddress 
+                                                            ? `${walletStatus.eoaAddress.slice(0, 6)}...${walletStatus.eoaAddress.slice(-4)}`
+                                                            : 'loading...'
+                                                        }
+                                                    </WalletAddress>
+                                                    <WalletStatus>✓ 지갑 사용 가능 (클릭하여 주소 복사)</WalletStatus>
+                                                </div>
+                                            ) : (
+                                                /* 지갑 미생성 - 생성 버튼 표시 */
+                                                <>
+                                                    <WalletAddress>지갑이 생성되지 않음</WalletAddress>
+                                                    <CreateWalletButton onClick={() => setShowCreateWalletModal(true)}>
+                                                        지갑 생성
+                                                    </CreateWalletButton>
+                                                </>
+                                            )}
+                                        </WalletSection>
+                                    ) : (
+                                        /* MetaMask 사용자의 경우 기존 방식 */
+                                        <WalletAddress>
+                                            {userInfo.wallet_address && userInfo.wallet_address !== '0x0000000000000000000000000000000000000000' 
+                                                ? `${userInfo.wallet_address.slice(0, 6)}...${userInfo.wallet_address.slice(-4)}`
+                                                : 'no wallet connected'
+                                            }
+                                        </WalletAddress>
+                                    )}
                                 </UserDetails>
                             </ProfileMainInfo>
                             
@@ -366,6 +610,52 @@ const ProfilePage = () => {
                     )}
                 </ContentSection>
             </PageContainer>
+            
+            {/* 지갑 생성 모달 */}
+            {showCreateWalletModal && (
+                <Modal>
+                    <ModalContent>
+                        <ModalTitle>지갑 생성</ModalTitle>
+                        <p style={{ color: '#999', fontSize: '14px', marginBottom: '16px' }}>
+                            안전한 비밀번호를 입력하여 지갑을 생성하세요. 이 비밀번호는 민팅 시 필요합니다.
+                        </p>
+                        
+                        <PasswordInput
+                            type="password"
+                            placeholder="비밀번호 (8자 이상)"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                        />
+                        
+                        <PasswordInput
+                            type="password"
+                            placeholder="비밀번호 확인"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                        />
+                        
+                        <ModalButtons>
+                            <ModalButton 
+                                className="secondary" 
+                                onClick={() => {
+                                    setShowCreateWalletModal(false);
+                                    setPassword('');
+                                    setConfirmPassword('');
+                                }}
+                            >
+                                취소
+                            </ModalButton>
+                            <ModalButton 
+                                className="primary" 
+                                onClick={handleCreateWallet}
+                                disabled={isCreatingWallet}
+                            >
+                                {isCreatingWallet ? '생성 중...' : '지갑 생성'}
+                            </ModalButton>
+                        </ModalButtons>
+                    </ModalContent>
+                </Modal>
+            )}
         </MainTemplate>
     );
 };

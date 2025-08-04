@@ -17,14 +17,7 @@ const validatePassword = (password) => {
         errors.push('비밀번호는 100자 이하여야 합니다.');
     }
     
-    if (!/[a-z]/.test(password)) {
-        errors.push('소문자를 포함해야 합니다.');
-    }
-    
-    if (!/[A-Z]/.test(password)) {
-        errors.push('대문자를 포함해야 합니다.');
-    }
-    
+    // 개발용 - 숫자만 필수로 하고 대소문자는 선택사항
     if (!/[0-9]/.test(password)) {
         errors.push('숫자를 포함해야 합니다.');
     }

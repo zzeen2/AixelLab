@@ -15,6 +15,49 @@ export const getCurrentUser = async () => {
     }
 };
 
+// 지갑 상태 조회
+export const getWalletStatus = async () => {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/auth/wallet-status`, {
+            withCredentials: true
+        });
+        return response.data;
+    } catch (error) {
+        console.error('지갑 상태 조회 실패:', error);
+        throw error;
+    }
+};
+
+// 지갑 생성
+export const createWallet = async (password) => {
+    try {
+        const response = await axios.post(`${API_BASE_URL}/auth/create-wallet`, {
+            password
+        }, {
+            withCredentials: true
+        });
+        return response.data;
+    } catch (error) {
+        console.error('지갑 생성 실패:', error);
+        throw error;
+    }
+};
+
+// 지갑 비밀번호 검증
+export const verifyWalletPassword = async (password) => {
+    try {
+        const response = await axios.post(`${API_BASE_URL}/auth/verify-wallet-password`, {
+            password
+        }, {
+            withCredentials: true
+        });
+        return response.data;
+    } catch (error) {
+        console.error('비밀번호 검증 실패:', error);
+        throw error;
+    }
+};
+
 // MetaMask 서명 메시지 요청
 export const requestMetaMaskMessage = async (walletAddress) => {
     try {

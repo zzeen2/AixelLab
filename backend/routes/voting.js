@@ -11,30 +11,46 @@ const { ethers } = require('ethers');
 // 투표 목록 가져오기
 router.get('/', async (req, res) => {
     try {
+        // 먼저 간단한 조회부터 테스트
+        const proposalCount = await db.Proposal.count();
+        console.log('Proposal 테이블 레코드 수:', proposalCount);
+        
+        // include 없이 기본 조회
         const votes = await db.Proposal.findAll({
+            order: [['createdAt', 'DESC']]
+        });
+        
+        console.log('조회된 Proposal 수:', votes.length);
+
+        // 관계 포함한 조회
+        const votesWithRelations = await db.Proposal.findAll({
             include: [
                 {
                     model: db.Artwork,
-                    attributes: ["title", 'description', 'image_ipfs_uri']
+                    as: 'artwork',
+                    attributes: ["title", 'description', 'image_ipfs_uri'],
+                    required: false
                 },
                 {
                     model: db.Vote,
-                    attributes: ['vote_type']
+                    as: 'votes',
+                    attributes: ['vote_type'],
+                    required: false
                 },
             ],
             order: [['createdAt', 'DESC']]
         });
 
         // 전처리
-        const formattedVotes = votes.map(vote => {
-            const votesFor = vote.Votes ? vote.Votes.filter(v => v.vote_type === 'for').length : 0;
-            const votesAgainst = vote.Votes ? vote.Votes.filter(v => v.vote_type === 'against').length : 0;
+        const formattedVotes = votesWithRelations.map(vote => {
+            const votesFor = vote.votes ? vote.votes.filter(v => v.vote_type === 'for').length : 0;
+            const votesAgainst = vote.votes ? vote.votes.filter(v => v.vote_type === 'against').length : 0;
             
             return {
                 id: vote.id,
-                title: vote.Artwork?.title || 'Untitled',
-                description: vote.Artwork?.description || '',
-                imageUrl: vote.Artwork?.image_ipfs_uri || '',
+                title: vote.artwork?.title || 'Untitled',
+                description: vote.artwork?.description || '',
+                imageUrl: vote.artwork?.image_ipfs_uri || '',
                 status: vote.status,
                 startAt: vote.start_at,
                 endAt: vote.end_at,
@@ -48,8 +64,9 @@ router.get('/', async (req, res) => {
 
         res.json({ votes: formattedVotes });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "투표 불러오기 실패" });
+        console.error('투표 목록 조회 실패:', error);
+        console.error('에러 스택:', error.stack);
+        res.status(500).json({ error: "투표 불러오기 실패", details: error.message });
     }
 });
 
@@ -62,11 +79,15 @@ router.get('/:id', async (req, res) => {
             include: [
                 {
                     model: db.Artwork,
-                    attributes: ['title', 'description', 'image_ipfs_uri']
+                    as: 'artwork',
+                    attributes: ['title', 'description', 'image_ipfs_uri'],
+                    required: false
                 },
                 {
                     model: db.Vote,
-                    attributes: ['vote_type', 'voter_user_id_fk']
+                    as: 'votes',
+                    attributes: ['vote_type', 'voter_user_id_fk'],
+                    required: false
                 }
             ]
         });
@@ -75,23 +96,23 @@ router.get('/:id', async (req, res) => {
             return res.status(404).json({ error: "투표를 찾을 수 없습니다." });
         }
 
-        const votesFor = vote.Votes ? vote.Votes.filter(v => v.vote_type === 'for').length : 0;
-        const votesAgainst = vote.Votes ? vote.Votes.filter(v => v.vote_type === 'against').length : 0;
+        const votesFor = vote.votes ? vote.votes.filter(v => v.vote_type === 'for').length : 0;
+        const votesAgainst = vote.votes ? vote.votes.filter(v => v.vote_type === 'against').length : 0;
 
         // 사용자의 투표 확인
         let userVote = null;
         const { user: currentUser, userId, loginType, error } = await getCurrentUser(req);
         
         if (!error && userId) {
-            const userVoteRecord = vote.Votes ? vote.Votes.find(v => v.voter_user_id_fk === userId) : null;
+            const userVoteRecord = vote.votes ? vote.votes.find(v => v.voter_user_id_fk === userId) : null;
             userVote = userVoteRecord ? userVoteRecord.vote_type : null;
         }
 
         const formattedVote = {
             id: vote.id,
-            title: vote.Artwork?.title || 'Untitled',
-            description: vote.Artwork?.description || '',
-            imageUrl: vote.Artwork?.image_ipfs_uri || '',
+            title: vote.artwork?.title || 'Untitled',
+            description: vote.artwork?.description || '',
+            imageUrl: vote.artwork?.image_ipfs_uri || '',
             status: vote.status,
             startAt: vote.start_at,
             endAt: vote.end_at,
@@ -108,8 +129,9 @@ router.get('/:id', async (req, res) => {
 
         res.json({ vote: formattedVote });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "투표를 불러오는데 실패했습니다." });
+        console.error('투표 상세 조회 실패:', error);
+        console.error('에러 스택:', error.stack);
+        res.status(500).json({ error: "투표를 불러오는데 실패했습니다.", details: error.message });
     }
 });
 
