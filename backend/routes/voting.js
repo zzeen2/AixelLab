@@ -1,283 +1,201 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const { isAuthenticated } = require('../middleware/auth');
 const { getCurrentUser } = require('../utils/auth');
-const db = require("../models");
-const { checkVoteThreshold, getMintingStatus } = require('../services/mintingService');
+const { checkVoteThreshold } = require('../services/mintingService');
 const contractManager = require('../utils/contractManager');
-const { verifyPassword } = require('../utils/passwordValidator');
-const { ethers } = require('ethers');
+const db = require('../models');
 
-// 투표 목록 가져오기
+// 투표 목록 조회
 router.get('/', async (req, res) => {
     try {
-        // 먼저 간단한 조회부터 테스트
-        const proposalCount = await db.Proposal.count();
-        console.log('Proposal 테이블 레코드 수:', proposalCount);
-        
-        // include 없이 기본 조회
-        const votes = await db.Proposal.findAll({
-            order: [['createdAt', 'DESC']]
-        });
-        
-        console.log('조회된 Proposal 수:', votes.length);
-
-        // 관계 포함한 조회
-        const votesWithRelations = await db.Proposal.findAll({
+        const proposals = await db.Proposal.findAll({
             include: [
                 {
                     model: db.Artwork,
-                    as: 'artwork',
-                    attributes: ["title", 'description', 'image_ipfs_uri'],
-                    required: false
+                    as: 'artwork'
                 },
                 {
                     model: db.Vote,
-                    as: 'votes',
-                    attributes: ['vote_type'],
-                    required: false
-                },
+                    as: 'votes'
+                }
             ],
             order: [['createdAt', 'DESC']]
         });
-
-        // 전처리
-        const formattedVotes = votesWithRelations.map(vote => {
-            const votesFor = vote.votes ? vote.votes.filter(v => v.vote_type === 'for').length : 0;
-            const votesAgainst = vote.votes ? vote.votes.filter(v => v.vote_type === 'against').length : 0;
-            
-            return {
-                id: vote.id,
-                title: vote.artwork?.title || 'Untitled',
-                description: vote.artwork?.description || '',
-                imageUrl: vote.artwork?.image_ipfs_uri || '',
-                status: vote.status,
-                startAt: vote.start_at,
-                endAt: vote.end_at,
-                votesFor,
-                votesAgainst,
-                totalVotes: votesFor + votesAgainst,
-                nftMinted: vote.nft_minted,
-                nftTokenId: vote.nft_token_id
-            }
-        });
-
-        res.json({ votes: formattedVotes });
+        res.json(proposals);
     } catch (error) {
-        console.error('투표 목록 조회 실패:', error);
-        console.error('에러 스택:', error.stack);
-        res.status(500).json({ error: "투표 불러오기 실패", details: error.message });
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch proposals' });
     }
 });
 
-// 투표 상세정보 불러오기
+// 투표 상세 조회
 router.get('/:id', async (req, res) => {
     try {
-        const voteId = req.params.id;
-
-        const vote = await db.Proposal.findByPk(voteId, {
+        const proposal = await db.Proposal.findByPk(req.params.id, {
             include: [
                 {
                     model: db.Artwork,
-                    as: 'artwork',
-                    attributes: ['title', 'description', 'image_ipfs_uri'],
-                    required: false
+                    as: 'artwork'
                 },
                 {
                     model: db.Vote,
-                    as: 'votes',
-                    attributes: ['vote_type', 'voter_user_id_fk'],
-                    required: false
+                    as: 'votes'
                 }
             ]
         });
 
-        if (!vote) {
-            return res.status(404).json({ error: "투표를 찾을 수 없습니다." });
+        if (!proposal) {
+            return res.status(404).json({ error: 'Proposal not found' });
         }
 
-        const votesFor = vote.votes ? vote.votes.filter(v => v.vote_type === 'for').length : 0;
-        const votesAgainst = vote.votes ? vote.votes.filter(v => v.vote_type === 'against').length : 0;
-
-        // 사용자의 투표 확인
-        let userVote = null;
-        const { user: currentUser, userId, loginType, error } = await getCurrentUser(req);
-        
-        if (!error && userId) {
-            const userVoteRecord = vote.votes ? vote.votes.find(v => v.voter_user_id_fk === userId) : null;
-            userVote = userVoteRecord ? userVoteRecord.vote_type : null;
-        }
-
-        const formattedVote = {
-            id: vote.id,
-            title: vote.artwork?.title || 'Untitled',
-            description: vote.artwork?.description || '',
-            imageUrl: vote.artwork?.image_ipfs_uri || '',
-            status: vote.status,
-            startAt: vote.start_at,
-            endAt: vote.end_at,
-            votesFor,
-            votesAgainst,
-            totalVotes: votesFor + votesAgainst,
-            minVotes: vote.min_votes,
-            userVote: userVote,
-            nftMinted: vote.nft_minted,
-            nftTokenId: vote.nft_token_id,
-            nftTransactionHash: vote.nft_transaction_hash,
-            mintedAt: vote.minted_at
-        };
-
-        res.json({ vote: formattedVote });
+        res.json(proposal);
     } catch (error) {
-        console.error('투표 상세 조회 실패:', error);
-        console.error('에러 스택:', error.stack);
-        res.status(500).json({ error: "투표를 불러오는데 실패했습니다.", details: error.message });
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch proposal' });
     }
 });
 
-// 투표 제출
-router.post('/:id/vote', isAuthenticated, async (req, res) => {
+// 투표하기
+router.post('/:id/vote', async (req, res) => {
     try {
-        // 사용자 정보 가져오기
-        const { user: currentUser, userId, loginType, error } = await getCurrentUser(req);
-        
-        if (error) return res.status(401).json({ success: false, message: "사용자 정보를 찾을 수 없습니다" });
+        const currentUser = await getCurrentUser(req);
+        if (!currentUser) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
 
-        const voteId = req.params.id;
         const { voteType } = req.body;
-        
-        // 투표가 진행중인지 확인
-        const proposal = await db.Proposal.findByPk(voteId);
-        if (!proposal) return res.status(404).json({ error: "투표를 찾을 수 없습니다" });
-    
-        if (proposal.status !== 'active') return res.status(400).json({ error: "투표가 진행중이지 않습니다" });
-    
-        // 투표했는지 확인
+        const proposalId = req.params.id;
+
+        if (!['for', 'against'].includes(voteType)) {
+            return res.status(400).json({ error: 'Invalid vote type' });
+        }
+
+        // 중복 투표 확인
         const existingVote = await db.Vote.findOne({
             where: {
-                proposal_id_fk: voteId,
-                voter_user_id_fk: userId
+                proposal_id_fk: proposalId,
+                voter_user_id_fk: currentUser.userId
             }
         });
-    
-        if (existingVote) return res.status(400).json({ error: "이미 투표되었습니다." });
-    
+
+        if (existingVote) {
+            return res.status(400).json({ error: '이미 투표한 제안입니다.' });
+        }
+
         // 투표 생성
         await db.Vote.create({
-            proposal_id_fk: voteId,
-            voter_user_id_fk: userId,
-            vote_type: voteType,
-            vote_weight: 1 
+            proposal_id_fk: proposalId,
+            voter_user_id_fk: currentUser.userId,
+            vote_type: voteType
         });
 
-        // 투표 임계점 체크 (민팅 준비 상태 확인)
-        setImmediate(async () => {
-            try {
-                const result = await checkVoteThreshold(voteId);
-                if (result.success && result.mintingReady) {
-                    console.log(`Proposal ${voteId} is ready for minting!`);
-                }
-            } catch (error) {
-                console.error(error);
+        // 투표 임계값 확인
+        const thresholdResult = await checkVoteThreshold(proposalId);
+        if (thresholdResult.readyForMinting) {
+            console.log("민팅 조건이 충족되었습니다. 자동 민팅을 준비합니다.");
+            
+            // 작품 상태를 민팅 준비 상태로 변경
+            const proposal = await db.Proposal.findByPk(proposalId, {
+                include: [
+                    {
+                        model: db.Artwork,
+                        as: 'artwork'
+                    }
+                ]
+            });
+            
+            if (proposal && proposal.artwork) {
+                await proposal.artwork.update({
+                    status: 'approved'
+                });
+                
+                console.log(`작품 ${proposal.artwork.id}가 승인 상태로 변경되었습니다.`);
             }
-        });
-        res.json({ message: "투표 제출이 완료되었습니다." });
-        
+        }
+
+        res.json({ success: true, message: 'Vote recorded successfully' });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "투표 제출에 실패했습니다." });
+        res.status(500).json({ error: 'Failed to record vote' });
     }
 });
 
-// 민팅 상태 조회
-router.get('/:id/minting-status', async (req, res) => {
+// 민팅 실행
+router.post('/:id/mint', async (req, res) => {
     try {
-        const proposalId = req.params.id;
-        const status = await getMintingStatus(proposalId);
-        res.json({ status });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "민팅 상태 조회에 실패했습니다." });
-    }
-});
-
-
-
-// NFT 민팅 실행
-router.post('/:id/mint', isAuthenticated, async (req, res) => {
-    try {
-        const { id: proposalId } = req.params;
-        const { password } = req.body;
         const currentUser = await getCurrentUser(req);
+        if (!currentUser) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
 
-        if (!password) return res.status(400).json({ error: "비밀번호를 입력해주세요."});
+        const proposalId = req.params.id;
+        const { password } = req.body;
 
-        // 제안 정보 조회
+        // 제안서 조회 (Artwork 포함)
         const proposal = await db.Proposal.findByPk(proposalId, {
-            include: [{ model: db.User, as: 'author' }]
+            include: [
+                {
+                    model: db.User,
+                    as: 'author'
+                },
+                {
+                    model: db.Artwork,
+                    as: 'artwork'
+                }
+            ]
         });
 
-        if (!proposal) return res.status(404).json({ error: "해당 제안을 찾을 수 없습니다."});
+        if (!proposal) {
+            return res.status(404).json({ error: 'Proposal not found' });
+        }
 
         // 작가 권한 확인
-        if (proposal.author.id !== currentUser.id) {
-            return res.status(403).json({ error: "작품 작가만 민팅을 실행할 수 있습니다."});
+        if (proposal.author.id !== currentUser.userId) {
+            return res.status(403).json({ error: "작품 작가만 민팅을 실행할 수 있습니다." });
         }
 
-        // 이미 민팅되었는지 확인
-        if (proposal.nft_minted) {
-            return res.status(400).json({ error: "이미 민팅된 작품입니다."});
-        }
-
-        // Google 사용자 비밀번호 검증
-        if (currentUser.login_type === 'google') {
-            if (!currentUser.password_hash) {
-                return res.status(400).json({ error: "지갑이 생성되지 않았습니다. 먼저 지갑을 생성해주세요."});
-            }
-
-            const isPasswordValid = await verifyPassword(password, currentUser.password_hash);
-            if (!isPasswordValid) {
-                return res.status(401).json({ error: "비밀번호가 일치하지 않습니다." });
-            }
-        }
-
-        // 투표 임계점 재확인
+        // 투표 임계값 확인
         const thresholdResult = await checkVoteThreshold(proposalId);
-        if (!thresholdResult.success || !thresholdResult.mintingReady) {
-            return res.status(400).json({ error: "아직 민팅 조건이 충족되지 않았습니다." });
+        if (!thresholdResult.readyForMinting) {
+            return res.status(400).json({ 
+                error: "민팅 조건이 충족되지 않았습니다." 
+            });
         }
 
-        // 작가 지갑 주소 결정
-        let artistAddress = thresholdResult.artistAddress;
+        // 작가 지갑 주소 가져오기
+        const artistAddress = await getArtistWalletAddress(currentUser.user);
+        if (!artistAddress) {
+            return res.status(400).json({ error: '작가 지갑 주소를 찾을 수 없습니다.' });
+        }
 
-        // Google 사용자의 경우 EOA 기반 트랜잭션 지갑 생성
+        // 트랜잭션 지갑 생성 (Google 사용자경우)
         let transactionWallet = null;
-        if (currentUser.login_type === 'google') {
-            const seedString = `aixellab_${currentUser.google_id}_${password}`;
-            const seed = ethers.keccak256(ethers.toUtf8Bytes(seedString));
-            transactionWallet = new ethers.Wallet(seed);
-            
-            // Smart Account 주소 사용
-            artistAddress = thresholdResult.artistAddress;
+        if (currentUser.loginType === 'google' && password) {
+            const { createPasswordBasedEOA } = require('../utils/walletGenerator');
+            transactionWallet = createPasswordBasedEOA(currentUser.user.google_id, password);
         }
+
+        // tokenURI 설정 - 실제 IPFS 메타데이터 URI 사용
+        const tokenURI = proposal.artwork?.metadata_ipfs_uri || proposal.artwork_url || `ipfs://QmDefaultTokenURI_${proposalId}`;
+        console.log('Token URI 설정:', tokenURI);
 
         // 민팅 실행
         const mintResult = await contractManager.mintApprovedArtwork(
             artistAddress,
             proposalId,
-            proposal.artwork_url,
+            tokenURI,
             thresholdResult.voteCount,
-            transactionWallet 
+            transactionWallet
         );
 
         if (!mintResult.success) {
-            return res.status(500).json({ error: "민팅 실행에 실패했습니다." });
+            return res.status(500).json({ error: `민팅 실패: ${mintResult.error}` });
         }
 
-        // DB 업데이트
+        // 제안서 업데이트
         await proposal.update({
             nft_minted: true,
-            nft_token_id: mintResult.tokenId,
+            nft_token_id: mintResult.tokenId || null,
             nft_transaction_hash: mintResult.transactionHash,
             minted_at: new Date(),
             artist_wallet_address: artistAddress
@@ -285,59 +203,55 @@ router.post('/:id/mint', isAuthenticated, async (req, res) => {
 
         res.json({
             success: true,
-            message: "NFT 민팅이 성공적으로 완료되었습니다!",
-            tokenId: mintResult.tokenId,
+            message: 'NFT 민팅이 완료되었습니다.',
             transactionHash: mintResult.transactionHash,
-            artistAddress: artistAddress,
-            voteCount: thresholdResult.voteCount
+            tokenId: mintResult.tokenId
         });
 
     } catch (error) {
-        console.error('민팅 실행 실패:', error);
-        res.status(500).json({ error: "민팅 실행 중 오류가 발생했습니다." });
+        console.error('Error executing minting:', error);
+        res.status(500).json({ error: '민팅 실행 중 오류가 발생했습니다.' });
     }
 });
 
 // 사용자의 민팅 대기 목록 조회
-router.get('/user/pending-mints', isAuthenticated, async (req, res) => {
+router.get('/user/pending-mints', async (req, res) => {
     try {
-        const { user: currentUser, userId, loginType, error } = await getCurrentUser(req);
-        
-        if (error) {
-            return res.status(401).json({ error: "로그인이 필요합니다." });
+        const currentUser = await getCurrentUser(req);
+        if (!currentUser) {
+            return res.status(401).json({ error: 'Authentication required' });
         }
 
-        // 사용자가 생성한 제안 중 민팅 준비 완료된 것들 조회
+        console.log('=== Pending Mints 조회 ===');
+        console.log('currentUser.userId:', currentUser.userId);
+
         const pendingMints = await db.Proposal.findAll({
             where: {
-                created_by: userId,
-                nft_minted: false // 아직 민팅되지 않은 것들
+                created_by: currentUser.userId,
+                nft_minted: false
             },
             include: [
                 {
                     model: db.Artwork,
-                    as: 'artwork',
-                    attributes: ['title', 'description', 'image_ipfs_uri'],
-                    required: false
+                    as: 'artwork'
                 },
                 {
                     model: db.Vote,
-                    as: 'votes',
-                    attributes: ['vote_type'],
-                    required: false
+                    as: 'votes'
                 }
             ],
             order: [['createdAt', 'DESC']]
         });
 
-        // 민팅 준비 상태 체크
         const mintingReadyProposals = [];
         
         for (const proposal of pendingMints) {
             const voteCount = proposal.votes ? proposal.votes.filter(v => v.vote_type === 'for').length : 0;
-            const VOTE_THRESHOLD = process.env.VOTE_THRESHOLD || 10;
+            const threshold = 10;
             
-            if (voteCount >= VOTE_THRESHOLD) {
+            console.log(`Proposal ${proposal.id}: voteCount=${voteCount}, threshold=${threshold}`);
+            
+            if (voteCount >= threshold) {
                 const votesFor = proposal.votes ? proposal.votes.filter(v => v.vote_type === 'for').length : 0;
                 const votesAgainst = proposal.votes ? proposal.votes.filter(v => v.vote_type === 'against').length : 0;
                 
@@ -350,7 +264,7 @@ router.get('/user/pending-mints', isAuthenticated, async (req, res) => {
                     votesFor,
                     votesAgainst,
                     totalVotes: votesFor + votesAgainst,
-                    threshold: VOTE_THRESHOLD,
+                    threshold,
                     mintingReady: true,
                     createdAt: proposal.createdAt
                 });
@@ -365,8 +279,59 @@ router.get('/user/pending-mints', isAuthenticated, async (req, res) => {
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "민팅 대기 목록 조회에 실패했습니다." });
+        res.status(500).json({ error: 'Failed to fetch pending mints' });
     }
 });
+
+// NFT 확인 API
+router.get('/nft/:tokenId', async (req, res) => {
+    try {
+        const { tokenId } = req.params;
+        const result = await contractManager.checkMintedNFT(tokenId);
+        
+        if (result.success) {
+            res.json({
+                success: true,
+                nft: result
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                error: result.error
+            });
+        }
+    } catch (error) {
+        console.error('Error checking NFT:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+});
+
+// 작가 지갑 주소 가져오기
+const getArtistWalletAddress = async (user) => {
+    try {
+        // Google 사용자인 경우 - EOA 주소 우선 사용
+        if (user.login_type === 'google' && user.eoa_address) {
+            return user.eoa_address;
+        }
+        // MetaMask 사용자인 경우
+        if (user.wallet_address && user.wallet_address !== '0x0000000000000000000000000000000000000000') {
+            return user.wallet_address;
+        }
+        // Google 사용자인 경우 - 스마트 계정 생성/조회
+        if (user.google_id && user.eoa_address) {
+            const accountResult = await contractManager.createGoogleUserAccount(user.eoa_address);
+            if (accountResult.success) {
+                return accountResult.accountAddress;
+            }
+        }
+        return null;
+    } catch (error) {
+        console.error('Error in getArtistWalletAddress:', error);
+        return null;
+    }
+};
 
 module.exports = router; 

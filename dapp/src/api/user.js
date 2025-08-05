@@ -24,4 +24,33 @@ export const getUserStats = async () => {
         console.error('통계 조회 실패:', error);
         throw new Error('통계 조회 실패');
     }
+};
+
+// 민팅된 NFT 목록 조회
+export const getMintedNFTs = async () => {
+    try {
+        const response = await axios.get('http://localhost:4000/artwork/minted', {
+            withCredentials: true
+        });
+        return response.data;
+    } catch (error) {
+        console.error('민팅된 NFT 조회 실패:', error);
+        if (error.response?.status === 404) {
+            throw new Error('민팅된 NFT가 없습니다.');
+        }
+        throw new Error('민팅된 NFT 조회 실패');
+    }
+};
+
+// NFT 상세 정보 조회
+export const getNFTDetail = async (nftId) => {
+    try {
+        const response = await axios.get(`http://localhost:4000/artwork/nft/${nftId}`, {
+            withCredentials: true
+        });
+        return response.data;
+    } catch (error) {
+        console.error('NFT 상세 정보 조회 실패:', error);
+        throw new Error('NFT 상세 정보 조회 실패');
+    }
 }; 

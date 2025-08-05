@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 contract SmartAccount {
-    address private owner; 
+    address public owner;  
     address public entryPoint;
     
     event Executed(address indexed target, uint value, bytes data);
@@ -45,14 +45,15 @@ contract SmartAccount {
 
     // 서명 검증 // useroperation의 서명이 유효한지 확인할 때
     function isValidSignature(bytes32 _hash, bytes calldata sig) external view returns (bool) {
+        // EntryPoint에서 이미 ethSignedMessageHash로 전달되므로 그대로 사용
         address recovered = _recoverSigner(_hash, sig);
         return recovered == owner;
     }
 
-    // 서명 복원
-    function _recoverSigner(bytes32 _hash, bytes memory sig) internal pure retu  (address) {
+    // 서명 복원 - ethSignedMessageHash를 직접 사용
+    function _recoverSigner(bytes32 _ethSignedHash, bytes memory sig) internal pure returns (address) {
         (bytes32 r, bytes32 s, uint8 v) = _splitSignature(sig);
-        return ecrecover(_hash, v, r, s);
+        return ecrecover(_ethSignedHash, v, r, s);
     }
 
     function _splitSignature(bytes memory sig) internal pure returns (bytes32 r, bytes32 s, uint8 v) {

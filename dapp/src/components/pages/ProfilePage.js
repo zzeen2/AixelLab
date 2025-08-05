@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { useNavigate } from 'react-router-dom';
 import MainTemplate from '../templates/MainTemplate';
 import UserAvatar from '../atoms/ui/UserAvatar';
-import { getUserArtworks, getUserStats } from '../../api/user';
+import { getUserArtworks, getUserStats, getMintedNFTs } from '../../api/user';
 import { getWalletStatus, createWallet } from '../../api/auth';
 import { getPendingMints, executeMinting } from '../../api/voting';
 
@@ -299,6 +300,7 @@ const LoadingSpinner = styled.div`
 `;
 
 const ProfilePage = () => {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('created');
     const [userInfo, setUserInfo] = useState(null);
     const [artworks, setArtworks] = useState([]);
@@ -314,10 +316,29 @@ const ProfilePage = () => {
     
     // 민팅 관련 state
     const [pendingMints, setPendingMints] = useState([]);
+    const [mintedNFTs, setMintedNFTs] = useState([]);
     const [showMintingModal, setShowMintingModal] = useState(false);
     const [selectedProposal, setSelectedProposal] = useState(null);
     const [mintingPassword, setMintingPassword] = useState('');
     const [isMinting, setIsMinting] = useState(false);
+
+    // 탭별 작품 필터링
+    const getFilteredArtworks = () => {
+        switch (activeTab) {
+            case 'created':
+                return artworks;
+            case 'minting':
+                return artworks.filter(artwork => 
+                    (artwork.status === 'pending' || artwork.status === 'approved') && 
+                    artwork.proposal && 
+                    artwork.proposal.votes_for >= artwork.proposal.threshold
+                );
+            case 'minted':
+                return artworks.filter(artwork => artwork.status === 'minted');
+            default:
+                return [];
+        }
+    };
 
     // 민팅 대기 목록 조회
     const fetchPendingMints = async () => {
@@ -331,9 +352,22 @@ const ProfilePage = () => {
         }
     };
 
+    // 민팅된 NFT 목록 조회
+    const fetchMintedNFTs = async () => {
+        try {
+            const response = await getMintedNFTs();
+            if (response.success) {
+                setMintedNFTs(response.minted_nfts);
+            }
+        } catch (error) {
+            console.error('민팅된 NFT 조회 실패:', error);
+        }
+    };
+
     // 민팅 실행
     const handleMinting = async () => {
-        if (!mintingPassword) {
+        // Google 사용자인 경우에만 비밀번호 확인
+        if (userInfo?.login_type === 'google' && !mintingPassword) {
             alert('비밀번호를 입력해주세요.');
             return;
         }
@@ -347,6 +381,7 @@ const ProfilePage = () => {
                 setMintingPassword('');
                 setSelectedProposal(null);
                 await fetchPendingMints(); // 목록 새로고침
+                await fetchMintedNFTs(); // 민팅된 NFT 목록도 새로고침
             }
         } catch (error) {
             alert('민팅에 실패했습니다: ' + (error.response?.data?.error || error.message));
@@ -479,6 +514,13 @@ const ProfilePage = () => {
                     console.error('민팅 대기 목록 조회 실패:', error);
                 }
 
+                // 민팅된 NFT 목록 조회
+                try {
+                    await fetchMintedNFTs();
+                } catch (error) {
+                    console.error('민팅된 NFT 조회 실패:', error);
+                }
+
             } catch (error) {
                 console.error('사용자 정보 조회 실패:', error);
             } finally {
@@ -593,7 +635,17 @@ const ProfilePage = () => {
                             active={activeTab === 'minting'} 
                             onClick={() => setActiveTab('minting')}
                         >
-                            minting ({pendingMints.length})
+                            minting ({getFilteredArtworks().filter(artwork => 
+                                artwork.status === 'pending' && 
+                                artwork.proposal && 
+                                artwork.proposal.votes_for >= artwork.proposal.threshold
+                            ).length})
+                        </Tab>
+                        <Tab 
+                            active={activeTab === 'minted'} 
+                            onClick={() => setActiveTab('minted')}
+                        >
+                            minted ({getFilteredArtworks().filter(artwork => artwork.status === 'minted').length})
                         </Tab>
                         <Tab 
                             active={activeTab === 'collected'} 
@@ -625,7 +677,7 @@ const ProfilePage = () => {
                                                 src={artwork.image_ipfs_uri} 
                                                 alt={artwork.title}
                                                 onError={(e) => {
-                                                    e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjE0Ij5Image not found</text></svg>';
+                                                    e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjE0Ij5JbWFnZSBub3QgZm91bmQ8L3RleHQ+Cjwvc3ZnPgo=';
                                                 }}
                                             />
                                             <ArtworkInfo>
@@ -633,9 +685,18 @@ const ProfilePage = () => {
                                                 <ArtworkDescription>
                                                     {artwork.description || 'No description'}
                                                 </ArtworkDescription>
-                                                <ArtworkStatus>
-                                                    {artwork.status}
-                                                </ArtworkStatus>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <ArtworkStatus>
+                                                        {artwork.status === 'pending' ? '투표 대기 중' : 
+                                                         artwork.status === 'minted' ? 'NFT 민팅 완료' : 
+                                                         artwork.status}
+                                                    </ArtworkStatus>
+                                                    {artwork.proposal && (
+                                                        <div style={{ fontSize: '10px', color: '#666' }}>
+                                                            {artwork.proposal.votes_for || 0}/{artwork.proposal.threshold || 10} 투표
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </ArtworkInfo>
                                         </ArtworkCard>
                                     ))}
@@ -650,30 +711,53 @@ const ProfilePage = () => {
 
                     {activeTab === 'minting' && (
                         <>
-                            {pendingMints.length > 0 ? (
+                            {getFilteredArtworks().length > 0 ? (
                                 <ArtworkGrid>
-                                    {pendingMints.map((proposal) => (
-                                        <ArtworkCard key={proposal.id}>
+                                    {getFilteredArtworks().map((artwork) => (
+                                        <ArtworkCard key={artwork.id}>
                                             <ArtworkImage 
-                                                src={proposal.imageUrl} 
-                                                alt={proposal.title}
+                                                src={artwork.image_ipfs_uri} 
+                                                alt={artwork.title}
                                                 onError={(e) => {
-                                                    e.target.src = '/default-artwork.png';
+                                                    e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjE0Ij5JbWFnZSBub3QgZm91bmQ8L3RleHQ+Cjwvc3ZnPgo=';
                                                 }}
                                             />
                                             <ArtworkInfo>
-                                                <ArtworkTitle>{proposal.title}</ArtworkTitle>
-                                                <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
-                                                    투표: {proposal.votesFor}/{proposal.threshold} (민팅 준비 완료)
+                                                <ArtworkTitle>{artwork.title}</ArtworkTitle>
+                                                <ArtworkDescription>
+                                                    {artwork.description || 'No description'}
+                                                </ArtworkDescription>
+                                                <div style={{ fontSize: '12px', color: '#28a745', marginBottom: '8px' }}>
+                                                    ✓ 민팅 준비 완료 ({artwork.proposal.votes_for}/{artwork.proposal.threshold} 투표)
                                                 </div>
                                                 <CreateWalletButton 
-                                                    onClick={() => {
-                                                        setSelectedProposal(proposal);
-                                                        setShowMintingModal(true);
+                                                onClick={() => {
+                                                        setSelectedProposal(artwork.proposal);
+                                                        // MetaMask 사용자는 바로 민팅, Google 사용자는 모달 표시
+                                                        if (userInfo?.login_type === 'metamask') {
+                                                            // MetaMask 사용자는 비밀번호 없이 바로 민팅
+                                                            setIsMinting(true);
+                                                            executeMinting(artwork.proposal.id, null)
+                                                                .then(response => {
+                                                                    if (response.success) {
+                                                                        alert('NFT 민팅이 성공적으로 완료되었습니다!');
+                                                                        fetchPendingMints();
+                                                                        fetchMintedNFTs();
+                                                                    }
+                                                                })
+                                                                .catch(error => {
+                                                                    alert('민팅에 실패했습니다: ' + (error.response?.data?.error || error.message));
+                                                                })
+                                                                .finally(() => {
+                                                                    setIsMinting(false);
+                                                                });
+                                                        } else {
+                                                            setShowMintingModal(true);
+                                                        }
                                                     }}
                                                     style={{ width: '100%', marginTop: '8px' }}
                                                 >
-                                                    NFT 민팅하기
+                                                    {isMinting ? '민팅 중...' : 'NFT 민팅하기'}
                                                 </CreateWalletButton>
                                             </ArtworkInfo>
                                         </ArtworkCard>
@@ -681,9 +765,55 @@ const ProfilePage = () => {
                                 </ArtworkGrid>
                             ) : (
                                 <EmptyState>
-                                    <div>민팅 대기 목록이 없습니다</div>
+                                    <div>민팅 준비된 작품이 없습니다</div>
                                     <div style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
                                         작품이 10표 이상 받으면 민팅할 수 있습니다
+                                    </div>
+                                </EmptyState>
+                            )}
+                        </>
+                    )}
+
+                    {activeTab === 'minted' && (
+                        <>
+                            {getFilteredArtworks().length > 0 ? (
+                                <ArtworkGrid>
+                                    {getFilteredArtworks().map((nft) => (
+                                        <ArtworkCard 
+                                            key={nft.id}
+                                            onClick={() => navigate(`/nft/${nft.id}`)}
+                                            style={{ cursor: 'pointer' }}
+                                        >
+                                            <ArtworkImage 
+                                                src={nft.image_ipfs_uri} 
+                                                alt={nft.title}
+                                                onError={(e) => {
+                                                    e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjE0Ij5JbWFnZSBub3QgZm91bmQ8L3RleHQ+Cjwvc3ZnPgo=';
+                                                }}
+                                            />
+                                            <ArtworkInfo>
+                                                <ArtworkTitle>{nft.title}</ArtworkTitle>
+                                                <ArtworkDescription>
+                                                    {nft.description || 'No description'}
+                                                </ArtworkDescription>
+                                                <div style={{ fontSize: '10px', color: '#28a745', marginBottom: '4px' }}>
+                                                    ✓ NFT 민팅 완료
+                                                </div>
+                                                <div style={{ fontSize: '10px', color: '#666', marginBottom: '4px' }}>
+                                                    Token ID: {nft.token_id || 'N/A'}
+                                                </div>
+                                                <div style={{ fontSize: '10px', color: '#666' }}>
+                                                    Minted: {nft.created_at ? new Date(nft.created_at).toLocaleDateString() : 'N/A'}
+                                                </div>
+                                            </ArtworkInfo>
+                                        </ArtworkCard>
+                                    ))}
+                                </ArtworkGrid>
+                            ) : (
+                                <EmptyState>
+                                    <div>민팅된 NFT가 없습니다</div>
+                                    <div style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
+                                        작품을 민팅하면 여기에 표시됩니다
                                     </div>
                                 </EmptyState>
                             )}
@@ -761,16 +891,24 @@ const ProfilePage = () => {
                 <Modal>
                     <ModalContent>
                         <ModalTitle>NFT 민팅</ModalTitle>
-                        <p style={{ color: '#999', fontSize: '14px', marginBottom: '16px' }}>
-                            민팅하려면 지갑 비밀번호를 입력해주세요.
-                        </p>
-                        
-                        <PasswordInput
-                            type="password"
-                            placeholder="민팅 비밀번호"
-                            value={mintingPassword}
-                            onChange={(e) => setMintingPassword(e.target.value)}
-                        />
+                        {userInfo?.login_type === 'google' ? (
+                            <>
+                                <p style={{ color: '#999', fontSize: '14px', marginBottom: '16px' }}>
+                                    민팅하려면 지갑 비밀번호를 입력해주세요.
+                                </p>
+                                
+                                <PasswordInput
+                                    type="password"
+                                    placeholder="민팅 비밀번호"
+                                    value={mintingPassword}
+                                    onChange={(e) => setMintingPassword(e.target.value)}
+                                />
+                            </>
+                        ) : (
+                            <p style={{ color: '#999', fontSize: '14px', marginBottom: '16px' }}>
+                                MetaMask 지갑으로 민팅을 진행합니다.
+                            </p>
+                        )}
                         
                         <ModalButtons>
                             <ModalButton 

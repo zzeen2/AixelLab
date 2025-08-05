@@ -304,16 +304,40 @@ const VoteDetailPage = () => {
   const loadVoteDetail = async () => {
     try {
       const response = await getVoteDetail(id);
-      if (response && response.vote) {
-        setVote(response.vote);
+      console.log('Vote detail response:', response);
+      
+      if (response) {
+        const votesFor = response.votes ? response.votes.filter(v => v.vote_type === 'for').length : 0;
+        const votesAgainst = response.votes ? response.votes.filter(v => v.vote_type === 'against').length : 0;
+        
+        const formattedVote = {
+          id: response.id,
+          title: response.artwork?.title || 'Untitled',
+          description: response.artwork?.description || '',
+          imageUrl: response.artwork?.image_ipfs_uri || '',
+          status: response.status,
+          startAt: response.start_at,
+          endAt: response.end_at,
+          minVotes: response.min_votes,
+          votesFor,
+          votesAgainst,
+          totalVotes: votesFor + votesAgainst,
+          nftMinted: response.nft_minted,
+          tokenId: response.nft_token_id,
+          transactionHash: response.nft_transaction_hash,
+          mintedAt: response.minted_at,
+          userVote: response.userVote
+        };
+        
+        setVote(formattedVote);
         
         // 사용자의 기존 투표 확인
-        if (isLoggedIn && response.vote.userVote) {
-          setUserVote(response.vote.userVote);
+        if (isLoggedIn && formattedVote.userVote) {
+          setUserVote(formattedVote.userVote);
         }
       }
     } catch (error) {
-      console.error(error);
+      console.error('Error loading vote detail:', error);
     } finally {
       setLoading(false);
     }

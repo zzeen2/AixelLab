@@ -204,9 +204,30 @@ const VotingPage = () => {
       console.log("Response type:", typeof response);
       console.log("Response keys:", Object.keys(response));
       
-      if (response && response.votes) {
-        console.log("Votes length:", response.votes.length);
-        setVotes(response.votes);
+      if (response && Array.isArray(response)) {
+        console.log("Votes length:", response.length);
+        
+        const formattedVotes = response.map(proposal => {
+          const votesFor = proposal.votes ? proposal.votes.filter(v => v.vote_type === 'for').length : 0;
+          const votesAgainst = proposal.votes ? proposal.votes.filter(v => v.vote_type === 'against').length : 0;
+          
+          return {
+            id: proposal.id,
+            title: proposal.artwork?.title || 'Untitled',
+            description: proposal.artwork?.description || '',
+            imageUrl: proposal.artwork?.image_ipfs_uri || '',
+            status: proposal.status,
+            votesFor,
+            votesAgainst,
+            totalVotes: votesFor + votesAgainst,
+            nftMinted: proposal.nft_minted,
+            tokenId: proposal.nft_token_id,
+            transactionHash: proposal.nft_transaction_hash,
+            mintedAt: proposal.minted_at
+          };
+        });
+        
+        setVotes(formattedVotes);
       } else {
         console.error('Unexpected response structure:', response);
         setVotes([]);

@@ -8,7 +8,7 @@ class Artwork extends Model {
             description: { type: DataTypes.TEXT, allowNull: true },
             image_ipfs_uri: { type: DataTypes.STRING(500), allowNull: false },
             metadata_ipfs_uri: { type: DataTypes.STRING(500), allowNull: false },
-            proposal_id: { type: DataTypes.STRING(100), allowNull: true },
+            proposal_id: { type: DataTypes.INTEGER, allowNull: true },
             status: { type: DataTypes.ENUM('pending', 'reviewing', 'approved', 'rejected', 'voting', 'minted'), defaultValue: 'pending'},
             token_id: { type: DataTypes.INTEGER, allowNull: true },
             user_id_fk: { type: DataTypes.INTEGER, allowNull: false }
@@ -24,7 +24,7 @@ class Artwork extends Model {
 
     static associate(models) {
         models.Artwork.belongsTo(models.User, { foreignKey: 'user_id_fk', targetKey: 'id' });
-        models.Artwork.hasOne(models.Proposal, { foreignKey: 'artwork_id_fk', sourceKey: 'id' });
+        models.Artwork.belongsTo(models.Proposal, { foreignKey: 'proposal_id', targetKey: 'id' });
     }
 }
 

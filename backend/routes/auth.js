@@ -383,4 +383,20 @@ router.post('/verify-wallet-password', isAuthenticated, async (req, res) => {
     }
 });
 
+// 세션 상태 확인 (디버깅용)
+router.get('/session-debug', (req, res) => {
+    console.log('=== 세션 디버깅 ===');
+    console.log('req.isAuthenticated():', req.isAuthenticated ? req.isAuthenticated() : 'undefined');
+    console.log('req.user:', req.user);
+    console.log('req.session.user:', req.session?.user);
+    console.log('req.session:', req.session);
+    
+    res.json({
+        isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
+        user: req.user,
+        sessionUser: req.session?.user,
+        sessionId: req.sessionID
+    });
+});
+
 module.exports = router;
