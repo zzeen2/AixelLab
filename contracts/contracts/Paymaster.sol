@@ -5,7 +5,7 @@ contract Paymaster {
     address public immutable entryPoint;
     address public immutable owner;
     uint256 public platformFunds; // 가스 대납용 자금
-    uint256 constant MAX_COST = 0.005 ether; // 트랜잭션 최대 가스비
+    uint256 constant MAX_COST = 0.02 ether; // 트랜잭션 최대 가스비 상향
     
     // 사용자 관리
     mapping(address => bool) public sponsoredUsers;
@@ -51,12 +51,32 @@ contract Paymaster {
         emit UserAdded(user);
     }
     
-    // EntryPoint용 검증 함수
-    function validatePaymasterUserOp(address account, uint256 maxCost) external view onlyEntryPoint returns(bool) {
-        require(sponsoredUsers[account], "User not sponsored");
+    // ERC-4337 표준에 맞는 validatePaymasterUserOp (하드코딩)
+    function validatePaymasterUserOp(
+        address sender,
+        uint256 maxCost
+    ) external view onlyEntryPoint returns (bytes memory context) {
+        require(sponsoredUsers[sender], "User not sponsored");
         require(platformFunds >= maxCost, "Insufficient funds");
         require(maxCost <= MAX_COST, "Exceeds limit");
-        return true;
+        
+        // context는 비어있어도 됨 (postOp에서 사용하지 않음)
+        return "";
+    }
+    
+    // ERC-4337 표준에 맞는 postOp (하드코딩)
+    function postOp(
+        uint8 mode,
+        bytes calldata context,
+        uint256 actualGasCost
+    ) external onlyEntryPoint {
+        // 실제 가스비를 platformFunds에서 차감
+        platformFunds -= actualGasCost;
+    }
+    
+    // 잔액 확인
+    function getPlatformBalance() external view returns (uint256) {
+        return platformFunds;
     }
     
     // 테스트용 공개 검증 함수
@@ -65,11 +85,6 @@ contract Paymaster {
         require(platformFunds >= maxCost, "Insufficient funds");
         require(maxCost <= MAX_COST, "Exceeds limit");
         return true;
-    }
-    
-    // 잔액 확인
-    function getPlatformBalance() external view returns (uint256) {
-        return platformFunds;
     }
     
     receive() external payable {

@@ -9,6 +9,7 @@ const artworkRoutes = require('./routes/artwork');
 const votingRoutes = require('./routes/voting');
 const proxyRoutes = require('./routes/proxy');
 const contractManager = require('./utils/contractManager');
+const marketplaceRoutes = require('./routes/marketplace');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -43,7 +44,7 @@ app.locals.db = db;
 const startServer = async () => {
     try {
         try {
-            await db.sequelize.sync({ force: true });
+            await db.sequelize.sync({ force: false });
             console.log('데이터베이스 테이블 재생성 완료');
         } catch (error) {
             console.error('데이터베이스 동기화 오류:', error);
@@ -72,6 +73,8 @@ app.use('/auth', authRoutes);
 app.use('/artwork', artworkRoutes);
 app.use('/voting', votingRoutes);
 app.use('/proxy', proxyRoutes);
+app.use('/proxy-image', proxyRoutes);
+app.use('/marketplace', marketplaceRoutes);
 
 app.get('/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });

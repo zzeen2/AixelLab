@@ -89,6 +89,53 @@ const SidebarContainer = styled.div`
     position: relative;
     background: #0d1017;
     border-right: 1px solid #2a2a2a;
+    min-width: ${props => props.isExpanded ? '240px' : '64px'};
+    pointer-events: auto;
+`;
+
+const LogoContainer = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #0d1017;
+    
+    &:hover {
+        background: rgba(139, 92, 246, 0.1);
+    }
+`;
+
+const LogoIcon = styled.div`
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #8b5cf6, #ec4899);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: white;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+`;
+
+const LogoText = styled.span`
+    font-size: 20px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #8b5cf6, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    opacity: ${props => props.isExpanded ? '1' : '0'};
+    transform: ${props => props.isExpanded ? 'translateX(0)' : 'translateX(-10px)'};
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    overflow: hidden;
+    letter-spacing: -0.5px;
+    visibility: ${props => props.isExpanded ? 'visible' : 'hidden'};
+    width: ${props => props.isExpanded ? 'auto' : '0'};
 `;
 
 
@@ -96,7 +143,7 @@ const SidebarContainer = styled.div`
 const Navigation = styled.nav`
     padding: 0 16px;
     min-width: 240px;
-    margin-top: 52px;
+    margin-top: 0;
 `;
 
 const NavItem = styled.div`
@@ -136,6 +183,8 @@ const NavText = styled.span`
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     white-space: nowrap;
     overflow: hidden;
+    visibility: ${props => props.isExpanded ? 'visible' : 'hidden'};
+    width: ${props => props.isExpanded ? 'auto' : '0'};
 `;
 
 const Divider = styled.div`
@@ -178,7 +227,9 @@ const Sidebar = ({ isExpanded }) => {
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const navigate = useNavigate();
 
-    const handleStudioClick = () => {
+    const handleStudioClick = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
         setIsModalOpen(true);
     };
 
@@ -187,12 +238,10 @@ const Sidebar = ({ isExpanded }) => {
     };
 
     const handleOptionSelect = (option) => {
-        console.log('Selected option:', option);
+        setIsModalOpen(false);
         if (option === 'ai-draft') {
-            // AI 드래프트 페이지로 이동
             navigate('/ai-draft');
         } else if (option === 'blank-canvas') {
-            // 빈 캔버스 페이지로 이동
             navigate('/blank-canvas');
         }
     };
@@ -200,6 +249,19 @@ const Sidebar = ({ isExpanded }) => {
     return (
         <>
             <SidebarContainer isExpanded={isExpanded}>
+                <LogoContainer onClick={() => window.location.href = '/'}>
+                    <LogoIcon>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            {/* 간단한 팔레트 */}
+                            <rect x="6" y="6" width="12" height="12" rx="2" fill="white"/>
+                            <circle cx="9" cy="9" r="1.5" fill="currentColor"/>
+                            <circle cx="15" cy="9" r="1.5" fill="currentColor"/>
+                            <circle cx="9" cy="15" r="1.5" fill="currentColor"/>
+                            <circle cx="15" cy="15" r="1.5" fill="currentColor"/>
+                        </svg>
+                    </LogoIcon>
+                    <LogoText isExpanded={isExpanded}>AixelLab</LogoText>
+                </LogoContainer>
                 <Navigation>
                     <NavItem active={true}>
                         <NavIcon>
@@ -207,7 +269,7 @@ const Sidebar = ({ isExpanded }) => {
                         </NavIcon>
                         <NavText isExpanded={isExpanded}>Discover</NavText>
                     </NavItem>
-                    <NavItem>
+                    <NavItem onClick={() => navigate('/nfts')}>
                         <NavIcon>
                             <NFTsIcon />
                         </NavIcon>
@@ -269,11 +331,13 @@ const Sidebar = ({ isExpanded }) => {
                 </Navigation>
             </SidebarContainer>
             
-            <CreateArtworkModal 
-                isOpen={isModalOpen}
-                onClose={handleModalClose}
-                onSelectOption={handleOptionSelect}
-            />
+            {isModalOpen && (
+                <CreateArtworkModal 
+                    isOpen={isModalOpen}
+                    onClose={handleModalClose}
+                    onSelectOption={handleOptionSelect}
+                />
+            )}
         </>
     );
 };

@@ -38,13 +38,11 @@ contract SmartAccountFactory {
         // 매핑에 저장
         accounts[userEOA][salt] = smartAccount;
         
-        // Paymaster에 사용자 추가 (임시로 주석 처리)
-        /*
+        // Paymaster에 사용자 추가
         (bool success,) = paymaster.call(
             abi.encodeWithSignature("addSponsoredUser(address)", smartAccount)
         );
         require(success, "Failed to add to paymaster");
-        */
 
         emit AccountCreated(userEOA, smartAccount, salt);
     }

@@ -7,33 +7,41 @@ import { generateImage } from '../../api/openai';
 const PageContainer = styled.div`
     display: flex;
     height: 100%;
-    gap: 24px;
-    padding: 15px;
+    gap: 32px;
+    padding: 32px;
     overflow: hidden;
     box-sizing: border-box;
     position: relative;
+    background-color: #0d1017;
 `;
 
 const LeftPanel = styled.div`
-    width: 30%;
-    background-color: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 6px;
-    padding: 24px;
+    width: 35%;
+    background-color: transparent;
+    padding: 32px;
     height: 100%;
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
     overflow: hidden;
-    gap: 16px;
+    gap: 24px;
+    position: relative;
+    
+    &::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 1px;
+        background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.1), transparent);
+    }
 `;
 
 const RightPanel = styled.div`
-    width: 70%;
-    background-color: #1a1a1a;
-    padding: 24px;
-    border: 1px solid #333;
-    border-radius: 6px;
+    width: 65%;
+    background-color: transparent;
+    padding: 32px;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -43,23 +51,31 @@ const RightPanel = styled.div`
 `;
 
 const Title = styled.h1`
-    font-size: 28px;
-    font-weight: 600;
+    font-size: 36px;
+    font-weight: 700;
     color: #ffffff;
     margin: 0 0 16px 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    background: linear-gradient(135deg, #8b5cf6, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 `;
 
 const Subtitle = styled.p`
-    font-size: 14px;
-    color: #666;
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.7);
     margin: 0 0 24px 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    line-height: 1.6;
 `;
 
 const SectionTitle = styled.h2`
-    font-size: 20px;
-    font-weight: 500;
+    font-size: 24px;
+    font-weight: 600;
     color: #ffffff;
-    margin: 0 0 16px 0;
+    margin: 0 0 20px 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 `;
 
 const ToolTitle = styled.h3`
@@ -67,106 +83,125 @@ const ToolTitle = styled.h3`
     font-weight: 500;
     color: #ffffff;
     margin: 0 0 8px 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 `;
 
 const ToolDescription = styled.p`
-    font-size: 12px;
-    color: #666;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.6);
     margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 `;
 
 const PromptInput = styled.textarea`
     width: 100%;
-    min-height: 120px;
-    padding: 16px;
-    background: #222;
-    border: 1px solid #333;
-    border-radius: 6px;
+    min-height: 140px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
     color: #ffffff;
-    font-size: 14px;
+    font-size: 16px;
     resize: vertical;
-    font-family: inherit;
-    transition: border-color 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    transition: all 0.2s ease;
     box-sizing: border-box;
+    line-height: 1.6;
     
     &:focus {
         outline: none;
         border-color: #8b5cf6;
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
     }
     
     &::placeholder {
-        color: #666;
+        color: rgba(255, 255, 255, 0.4);
     }
 `;
 
 const GenerateButton = styled.button`
-    background: #8b5cf6;
+    background: linear-gradient(135deg, #8b5cf6, #ec4899);
     color: #ffffff;
     border: none;
-    border-radius: 6px;
-    padding: 12px 24px;
+    border-radius: 12px;
+    padding: 16px 32px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    
+    &:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+    }
+    
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+`;
+
+const PreviewArea = styled.div`
+    flex: 1;
+    background: transparent;
+    border: 2px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    overflow: hidden;
+    box-sizing: border-box;
+    min-height: 0;
+    transition: all 0.2s ease;
+    
+    &:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+        background: transparent;
+    }
+`;
+
+const PreviewText = styled.p`
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 16px;
+    text-align: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+`;
+
+const ActionButtons = styled.div`
+    display: flex;
+    gap: 16px;
+    flex-shrink: 0;
+`;
+
+const ActionButton = styled.button`
+    background: ${props => props.primary ? 'linear-gradient(135deg, #8b5cf6, #ec4899)' : 'rgba(255, 255, 255, 0.05)'};
+    color: #ffffff;
+    border: 1px solid ${props => props.primary ? 'transparent' : 'rgba(255, 255, 255, 0.1)'};
+    border-radius: 12px;
+    padding: 14px 28px;
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
-    margin-top: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     
     &:hover:not(:disabled) {
-        background: #7c3aed;
+        background: ${props => props.primary ? 'linear-gradient(135deg, #7c3aed, #db2777)' : 'rgba(255, 255, 255, 0.1)'};
+        border-color: ${props => props.primary ? 'transparent' : 'rgba(255, 255, 255, 0.2)'};
         transform: translateY(-1px);
     }
     
     &:disabled {
         opacity: 0.5;
         cursor: not-allowed;
-    }
-`;
-
-const PreviewArea = styled.div`
-    flex: 1;
-    background-color: #222;
-    border: 2px dashed #333;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 20px;
-    overflow: hidden;
-    box-sizing: border-box;
-    min-height: 0;
-`;
-
-const PreviewText = styled.p`
-    color: #666;
-    font-size: 14px;
-    text-align: center;
-`;
-
-const ActionButtons = styled.div`
-    display: flex;
-    gap: 12px;
-    flex-shrink: 0;
-`;
-
-const ActionButton = styled.button`
-    background: ${props => props.primary ? '#8b5cf6' : 'transparent'};
-    color: #ffffff;
-    border: 1px solid ${props => props.primary ? '#8b5cf6' : '#333'};
-    border-radius: 6px;
-    padding: 10px 20px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    
-    &:hover:not(:disabled) {
-        background: ${props => props.primary ? '#7c3aed' : 'rgba(139, 92, 246, 0.1)'};
-        border-color: #8b5cf6;
-    }
-    
-    &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
+        transform: none;
     }
 `;
 
@@ -174,14 +209,32 @@ const ButtonText = styled.span`
     font-size: 14px;
     font-weight: 500;
     color: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 `;
 
 const LoadingText = styled.p`
-    font-size: 14px;
-    color: #666;
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.6);
     text-align: center;
     margin: 16px 0 0 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 `;
+
+const GeneratedImage = styled.img`
+    width: 90%;
+    height: 90%;
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 12px;
+    object-fit: contain;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+`;
+
+const buildPixelArtPrompt = (subject) => {
+    return `${subject} in pixel art style, 8-bit, retro gaming aesthetic`;
+};
 
 const AIDraftPage = () => {
     const navigate = useNavigate();
@@ -190,6 +243,31 @@ const AIDraftPage = () => {
     const [generatedImage, setGeneratedImage] = useState(null);
     const [error, setError] = useState(null);
 
+    const drawWithPadding = (srcUrl, paddingPx = 16) => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                const size = 256;
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    resolve(srcUrl);
+                    return;
+                }
+                ctx.imageSmoothingEnabled = false;
+                ctx.clearRect(0, 0, size, size);
+                const drawSize = size - paddingPx * 2;
+                ctx.drawImage(img, paddingPx, paddingPx, drawSize, drawSize);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = () => resolve(srcUrl);
+            img.src = srcUrl;
+        });
+    };
+
     const handleGenerate = async () => {
         if (!prompt.trim()) return;
         
@@ -197,17 +275,18 @@ const AIDraftPage = () => {
         setError(null);
         
         try {
-            //todo 프롬프트 수정
-            const enhancedPrompt = `${prompt} in pixel art style, 8-bit, retro gaming aesthetic`;
+            const enhancedPrompt = buildPixelArtPrompt(prompt);
             
             const imageUrl = await generateImage(enhancedPrompt);
-            console.log("imageUrl", imageUrl)
-            setGeneratedImage(imageUrl);
+            // 2px@32 => 16px@256 패딩 적용해 가장자리 여백을 보장
+            const paddedUrl = await drawWithPadding(imageUrl, 16);
+            setGeneratedImage(paddedUrl);
         } catch (error) {
             console.error(error);
-        }finally {
-        setIsGenerating(false); 
-    }
+            setError('Failed to generate image. Please try again.');
+        } finally {
+            setIsGenerating(false); 
+        }
     };
 
     const handleSave = () => {
@@ -217,7 +296,6 @@ const AIDraftPage = () => {
 
     const handleEdit = () => {
         if (generatedImage) {
-            // 생성된 이미지 URL을 state로 전달하거나 localStorage에 저장
             localStorage.setItem('draftImageUrl', generatedImage);
             navigate('/editor/ai-draft');
         }
@@ -227,10 +305,14 @@ const AIDraftPage = () => {
         <MainTemplate>
             <PageContainer>
                 <LeftPanel>
-                    <SectionTitle>AI Draft Generator</SectionTitle>
+                    <Title>AI Draft Generator</Title>
+                    <Subtitle>
+                        Describe your vision and let AI create a pixel art draft for you. 
+                        Perfect for getting started with your creative journey.
+                    </Subtitle>
                     
                     <PromptInput
-                        placeholder="Describe the pixel art you want to create..."
+                        placeholder="Describe the pixel art you want to create... (e.g., 'A cute cat in a magical forest', 'A futuristic city skyline', 'A medieval castle on a hill')"
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
                     />
@@ -248,36 +330,29 @@ const AIDraftPage = () => {
                     
                     <PreviewArea>
                         {isGenerating ? (
-                            <PreviewText>Generating...</PreviewText>
+                            <PreviewText>🎨 Generating your pixel art masterpiece...</PreviewText>
                         ) : error ? (
-                            <PreviewText style={{ color: '#ef4444' }}>{error}</PreviewText>
+                            <PreviewText style={{ color: '#ef4444' }}>❌ {error}</PreviewText>
                         ) : generatedImage ? (
-                            <img 
+                            <GeneratedImage 
                                 src={generatedImage} 
                                 alt="Generated draft" 
-                                style={{ 
-                                    width: 'auto', 
-                                    height: 'auto', 
-                                    maxWidth: '80%', 
-                                    maxHeight: '80%',
-                                    borderRadius: '6px',
-                                    objectFit: 'contain'
-                                }}
                                 onError={(e) => {
                                     console.error('Image load error:', e);
+                                    setError('Failed to load generated image.');
                                 }}
                             />
                         ) : (
-                            <PreviewText>Generated image will appear here</PreviewText>
+                            <PreviewText>✨ Your generated image will appear here</PreviewText>
                         )}
                     </PreviewArea>
                     
                     <ActionButtons>
                         <ActionButton onClick={handleSave} disabled={!generatedImage || isGenerating}>
-                            Save Draft
+                            💾 Save Draft
                         </ActionButton>
                         <ActionButton primary onClick={handleEdit} disabled={!generatedImage || isGenerating}>
-                            Open in Editor
+                            🎨 Open in Editor
                         </ActionButton>
                     </ActionButtons>
                 </RightPanel>

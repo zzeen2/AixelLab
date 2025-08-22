@@ -47,19 +47,11 @@ const AIDraftModal = ({ isOpen, onClose, onSubmit }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        const prompt = e.target.elements.prompt.value.trim();
-        if (prompt.length > 10) {
-            alert("10글자 이내로 입력해주세요.");
-        return;
-    }
-
-        console.log("input prompt", prompt);
-        const finalPrompt = `256x256 pixel art of a ${prompt} character, NES 8bit style, minimal details, clean grid, no background`;
-        console.log("final prompt", finalPrompt);
-
-        onSubmit(finalPrompt);
+        const subject = e.target.elements.prompt.value.trim();
+        if (!subject) return;
+        onSubmit(subject);
         onClose();
-    };
+    }
 
     return (
         <Overlay>

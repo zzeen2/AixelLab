@@ -67,6 +67,63 @@ router.get('/', async (req, res) => {
     }
 });
 
+// 민팅된 NFT 목록 조회
+router.get('/minted', async (req, res) => {
+    try {
+        console.log('민팅된 NFT 조회 시작');
+        
+        const mintedArtworks = await db.Artwork.findAll({
+            where: {
+                status: 'minted'
+            },
+            include: [
+                {
+                    model: db.User,
+                    as: 'User',
+                    attributes: ['id', 'display_name', 'email']
+                }
+            ],
+            order: [['updatedAt', 'DESC']]
+        });
+        
+        console.log('조회된 민팅된 작품 수:', mintedArtworks.length);
+        console.log('작품 목록:', mintedArtworks.map(a => ({ id: a.id, title: a.title, status: a.status })));
+
+        // Proposal 정보를 별도로 조회
+        const mintedNFTs = await Promise.all(mintedArtworks.map(async (artwork) => {
+            let proposal = null;
+            if (artwork.proposal_id) {
+                proposal = await db.Proposal.findByPk(artwork.proposal_id);
+            }
+            
+            return {
+                id: artwork.id,
+                title: artwork.title,
+                description: artwork.description,
+                image_url: artwork.image_ipfs_uri,
+                metadata_uri: artwork.metadata_ipfs_uri,
+                status: artwork.status,
+                token_id: artwork.token_id,
+                created_at: artwork.createdAt,
+                minted_at: proposal?.minted_at,
+                transaction_hash: proposal?.nft_transaction_hash,
+                artist_address: proposal?.artist_wallet_address,
+                user: artwork.User
+            };
+        }));
+
+        console.log('최종 결과:', mintedNFTs);
+        
+        res.json({
+            success: true,
+            minted_nfts: mintedNFTs
+        });
+    } catch (error) {
+        console.error('민팅된 NFT 목록 조회 실패:', error);
+        res.status(500).json({ success: false, message: "민팅된 NFT 목록을 가져오는데 실패했습니다." });
+    }
+});
+
 // 작품 상세 조회
 router.get('/:id', async (req, res) => {
     try {
@@ -75,7 +132,7 @@ router.get('/:id', async (req, res) => {
                 {
                     model: db.User,
                     as: 'User',
-                    attributes: ['id', 'display_name', 'email']
+                    attributes: ['id', 'display_name', 'email', 'wallet_address']
                 },
                 {
                     model: db.Proposal,
@@ -150,10 +207,22 @@ router.post('/submit', isAuthenticated, async (req, res) => {
         }
         
         const { title, description, imageData } = req.body;
-
+        // 선택적 초기 가격
+        let { price } = req.body;
+ 
         if (!title || !imageData) return res.status(400).json({ error: "작품 제목과 이미지를 확인해주세요." });
-
+ 
         console.log('작품 정보:', { title, description, imageDataLength: imageData?.length });
+        if (price != null && price !== '') {
+            // 가격 검증: 0보다 크고 소수점 6자리 이내
+            const priceStr = String(price);
+            const valid = /^([0-9]+)(\.[0-9]{1,6})?$/.test(priceStr) && parseFloat(priceStr) > 0;
+            if (!valid) {
+                return res.status(400).json({ success: false, message: '가격은 0보다 크고 소수점 6자리 이내여야 합니다.' });
+            }
+        } else {
+            price = null;
+        }
         
         // pinata에 이미지 업로드
         const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
@@ -194,7 +263,7 @@ router.post('/submit', isAuthenticated, async (req, res) => {
             name: title,
             description,
             image: ipfsUri,
-            attributes: []
+            attributes: price ? [{ trait_type: 'initial_price_axc', value: String(price) }] : []
         };
         
         console.log('PINATA 메타데이터 업로드 시작...');
@@ -229,7 +298,8 @@ router.post('/submit', isAuthenticated, async (req, res) => {
                 start_at: new Date(),
                 end_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7일 후 종료
                 min_votes: 10,
-                status: 'active'
+                status: 'active',
+                initial_price_units: price ? BigInt(Math.round(parseFloat(price) * 1e6)) : null
             });
 
             console.log('Proposal 생성 완료:', proposal.id);
@@ -260,7 +330,8 @@ router.post('/submit', isAuthenticated, async (req, res) => {
                     end_at: proposal.end_at,
                     ready_for_minting: thresholdResult.readyForMinting,
                     vote_count: thresholdResult.voteCount,
-                    threshold: thresholdResult.threshold
+                    threshold: thresholdResult.threshold,
+                    initial_price_axc: price || null
                 }
             });
             
@@ -354,6 +425,15 @@ router.post('/:id/mint', isAuthenticated, async (req, res) => {
         // tokenURI 설정
         const tokenURI = artwork.metadata_ipfs_uri || `ipfs://QmDefaultTokenURI_${artworkId}`;
 
+        // 사용자 타입 결정
+        const userType = loginType === 'google' ? 'google' : 'metamask';
+        
+        // 메타마스크 사용자의 경우 서명된 signature를 받음
+        let signature = null;
+        if (userType === 'metamask' && req.body.signature) {
+            signature = req.body.signature;
+        }
+        
         // 민팅 실행
         const contractManager = require('../utils/contractManager');
         const mintResult = await contractManager.mintApprovedArtwork(
@@ -361,7 +441,8 @@ router.post('/:id/mint', isAuthenticated, async (req, res) => {
             proposal.id,
             tokenURI,
             thresholdResult.voteCount,
-            transactionWallet
+            signature, // 메타마스크 사용자의 경우 서명된 signature
+            userType
         );
 
         if (!mintResult.success) {
@@ -574,62 +655,7 @@ router.get('/user/stats', isAuthenticated, async (req, res) => {
     }
 });
 
-// 민팅된 NFT 목록 조회
-router.get('/minted', async (req, res) => {
-    try {
-        console.log('민팅된 NFT 조회 시작');
-        
-        const mintedArtworks = await db.Artwork.findAll({
-            where: {
-                status: 'minted'
-            },
-            include: [
-                {
-                    model: db.User,
-                    as: 'User',
-                    attributes: ['id', 'display_name', 'email']
-                }
-            ],
-            order: [['updatedAt', 'DESC']]
-        });
-        
-        console.log('조회된 민팅된 작품 수:', mintedArtworks.length);
-        console.log('작품 목록:', mintedArtworks.map(a => ({ id: a.id, title: a.title, status: a.status })));
 
-        // Proposal 정보를 별도로 조회
-        const mintedNFTs = await Promise.all(mintedArtworks.map(async (artwork) => {
-            let proposal = null;
-            if (artwork.proposal_id) {
-                proposal = await db.Proposal.findByPk(artwork.proposal_id);
-            }
-            
-            return {
-                id: artwork.id,
-                title: artwork.title,
-                description: artwork.description,
-                image_url: artwork.image_ipfs_uri,
-                metadata_uri: artwork.metadata_ipfs_uri,
-                status: artwork.status,
-                token_id: artwork.token_id,
-                created_at: artwork.createdAt,
-                minted_at: proposal?.minted_at,
-                transaction_hash: proposal?.nft_transaction_hash,
-                artist_address: proposal?.artist_wallet_address,
-                user: artwork.User
-            };
-        }));
-
-        console.log('최종 결과:', mintedNFTs);
-        
-        res.json({
-            success: true,
-            minted_nfts: mintedNFTs
-        });
-    } catch (error) {
-        console.error('민팅된 NFT 목록 조회 실패:', error);
-        res.status(500).json({ success: false, message: "민팅된 NFT 목록을 가져오는데 실패했습니다." });
-    }
-});
 
 // NFT 상세 정보 조회
 router.get('/nft/:id', async (req, res) => {
@@ -641,7 +667,7 @@ router.get('/nft/:id', async (req, res) => {
                 {
                     model: db.User,
                     as: 'User',
-                    attributes: ['id', 'display_name', 'email']
+                    attributes: ['id', 'display_name', 'email', 'wallet_address']
                 },
                 {
                     model: db.Proposal,
@@ -659,6 +685,9 @@ router.get('/nft/:id', async (req, res) => {
         if (!artwork) {
             return res.status(404).json({ success: false, message: "NFT를 찾을 수 없습니다." });
         }
+
+        console.log('NFT 상세 조회 - artwork.User:', artwork.User);
+        console.log('NFT 상세 조회 - artwork.User.wallet_address:', artwork.User?.wallet_address);
 
         if (artwork.status !== 'minted') {
             return res.status(400).json({ success: false, message: "이 작품은 아직 NFT로 민팅되지 않았습니다." });
@@ -693,6 +722,11 @@ router.get('/nft/:id', async (req, res) => {
                 nft_minted: proposal.nft_minted
             } : null
         };
+        
+        console.log('NFT 상세 정보 - artwork:', artwork.toJSON());
+        console.log('NFT 상세 정보 - artwork.token_id:', artwork.token_id);
+        console.log('NFT 상세 정보 - proposal.nft_token_id:', proposal?.nft_token_id);
+        console.log('NFT 상세 정보 - nftInfo.token_id:', nftInfo.token_id);
 
         res.json({
             success: true,

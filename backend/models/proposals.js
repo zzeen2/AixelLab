@@ -20,7 +20,10 @@ class Proposal extends Model {
             nft_token_id: { type: DataTypes.INTEGER, allowNull: true },
             nft_transaction_hash: { type: DataTypes.STRING(66), allowNull: true },
             minted_at: { type: DataTypes.DATE, allowNull: true },
-            artist_wallet_address: { type: DataTypes.STRING(42), allowNull: true }
+            artist_wallet_address: { type: DataTypes.STRING(42), allowNull: true },
+
+            // 초기 가격(AXC 최소단위, 6 decimals). 선택 입력
+            initial_price_units: { type: DataTypes.BIGINT, allowNull: true }
         }, {
             sequelize,
             timestamps: true,

@@ -7,36 +7,36 @@ import {PreviewModal} from "../molecules";
 const EditorLayout = styled.div`
     display: flex;
     height: 100%;
-    gap: 24px;
+    gap: 32px;
     overflow: visible;
+    justify-content: center;
+    align-items: center;
 `;
 
 const CanvasSection = styled.div`
-    flex: 1;
+    flex: 0 0 auto;
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: #1a1a1a;
-    border-radius: 12px;
+    background-color: transparent;
     padding: 24px;
-    border: 1px solid #2a2a2a;
     overflow: visible;
+    height: 688px;
 `;
 
 const Canvas = styled.canvas`
-    border: 2px solid #2a2a2a;
-    border-radius: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
     background-color: #ffffff;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 `;
 
 const SidebarSection = styled.div`
     display: flex;
     flex-direction: column;
-    gap: 24px;
-    min-width: 280px;
-    max-width: 320px;
-    overflow-y: auto;
-    max-height: 100%;
+    gap: 16px;
+    width: 500px;
+    height: 688px;
     
     &::-webkit-scrollbar {
         display: none;
@@ -51,53 +51,103 @@ const ToolsSection = styled.div`
     gap: 12px;
 `;
 
+
+
 const ToolDescription = styled.p`
-    color: #8b949e;
-    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 14px;
     margin: 0;
-    line-height: 1.4;
+    line-height: 1.6;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 `;
 
 const ToolButton = styled.button`
-    background-color: ${props => props.active ? '#8b5cf6' : '#2a2a2a'};
+    background-color: ${props => props.active ? 'linear-gradient(135deg, #8b5cf6, #ec4899)' : 'rgba(255, 255, 255, 0.05)'};
     color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    padding: 12px 16px;
+    border: 1px solid ${props => props.active ? 'transparent' : 'rgba(255, 255, 255, 0.1)'};
+    border-radius: 12px;
+    padding: 14px 20px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     
     &:hover {
-        background-color: ${props => props.active ? '#7c3aed' : '#3a3a3a'};
+        background-color: ${props => props.active ? 'linear-gradient(135deg, #7c3aed, #db2777)' : 'rgba(255, 255, 255, 0.1)'};
+        border-color: ${props => props.active ? 'transparent' : 'rgba(255, 255, 255, 0.2)'};
         transform: translateY(-1px);
     }
 `;
 
+const ColorPickerButton = styled.button`
+    background: ${props => props.active ? 'linear-gradient(135deg, #8b5cf6, #ec4899)' : 'rgba(255, 255, 255, 0.1)'};
+    color: #ffffff;
+    border: 1px solid ${props => props.active ? 'transparent' : 'rgba(255, 255, 255, 0.2)'};
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 16px;
+    
+    &:hover {
+        background: ${props => props.active ? 'linear-gradient(135deg, #7c3aed, #db2777)' : 'rgba(255, 255, 255, 0.15)'};
+        transform: scale(1.05);
+    }
+`;
+
 const CompleteButton = styled.button`
-  background-color: #8b5cf6;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
   color: #ffffff;
   border: none;
-  border-radius: 8px;
-  padding: 12px 16px;
-  font-size: 14px;
+  border-radius: 12px;
+  padding: 16px 24px;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
   
   &:hover {
-    background-color: #7c3aed;
-    transform: translateY(-1px);
+    background: linear-gradient(135deg, #7c3aed, #db2777);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
   }
 `;
 
+const ColumnSection = styled.div`
+    display: flex;
+    gap: 24px;
+    flex: 1;
+`;
+
+const GridSection = styled.div`
+    background-color: rgba(255, 255, 255, 0.02);
+    border-radius: 16px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    width: 50%;
+`;
+
 const PaletteSection = styled.div`
-    background-color: #1a1a1a;
-    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.02);
+    border-radius: 16px;
     padding: 20px;
-    border: 1px solid #2a2a2a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 `;
 
 const ColorSection = styled.div`
@@ -111,10 +161,11 @@ const ColorSection = styled.div`
 `;
 
 const SectionTitle = styled.h3`
-    font-size: 20px;
+    font-size: 16px;
     font-weight: 600;
     color: #ffffff;
-    margin: 0 0 16px 0;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 `;
 
 const SelectedColorBox = styled.div`
@@ -160,9 +211,9 @@ const PixelEditor = ({ draftImageUrl }) => {
     const [previewUrl, setPreviewUrl] = useState("");
     const [grid, setGrid] = useState([]);
 
-    const canvasWidth = 512;
-    const canvasHeight = 512;
-    const pixelSize = 16;
+    const canvasWidth = 640;
+    const canvasHeight = 640;
+    const pixelSize = 20;
     const cols = canvasWidth / pixelSize; // 32
     const rows = canvasHeight / pixelSize;
     //const previewImage = canvasRef.current.toDataURL("image/png");
@@ -423,35 +474,39 @@ const PixelEditor = ({ draftImageUrl }) => {
             </CanvasSection>
             
             <SidebarSection>
-                <ToolsSection>
-                <ToolButton 
-                    onClick={() => setIsEyedropperMode(!isEyedropperMode)}
-                    active={isEyedropperMode}
-                >
-                    💧 {isEyedropperMode ? "Color Picker ON" : "Color Picker OFF"}
-                </ToolButton>
-                <ToolDescription>
-                    {isEyedropperMode 
-                        ? "Click on any pixel to add its color to your palette"
-                        : "Enable to pick colors from your artwork"
-                    }
-                </ToolDescription>
+                {/* 2컬럼 레이아웃 */}
+                <ColumnSection>
+                    {/* Left Column - Color Wheel */}
+                    <GridSection>
+                        <SectionTitle>Color Wheel</SectionTitle>
+                        <SelectedColorBox color={selectedColor} />
+                        <ColorWheel color={selectedColor} onChange={handleColorWheelChange} />
+                    </GridSection>
+                    
+                    {/* Right Column - Palette with Color Picker */}
+                    <GridSection>
+                        <SectionTitle>Palette</SectionTitle>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                            <ColorPickerButton 
+                                onClick={() => setIsEyedropperMode(!isEyedropperMode)}
+                                active={isEyedropperMode}
+                            >
+                                💧
+                            </ColorPickerButton>
+                            <ToolDescription style={{ margin: 0, fontSize: '12px' }}>
+                                {isEyedropperMode ? "Click pixels to add colors" : "Pick colors from artwork"}
+                            </ToolDescription>
+                        </div>
+                        <Palette palette={palette} onSelectColor={handleSelectColor} />
+                    </GridSection>
+                </ColumnSection>
                 
-                <CompleteButton onClick={handleShowPreview}>
-                    Complete (Preview)
-                </CompleteButton>
-            </ToolsSection>
-                
-                            <PaletteSection>
-                <SectionTitle>Palette</SectionTitle>
-                <Palette palette={palette} onSelectColor={handleSelectColor} />
-            </PaletteSection>
-            
-            <ColorSection>
-                <SectionTitle>Color Selection</SectionTitle>
-                <SelectedColorBox color={selectedColor} />
-                <ColorWheel color={selectedColor} onChange={handleColorWheelChange} />
-            </ColorSection>
+                {/* Complete Button */}
+                <div style={{ display: 'flex', gap: '24px' }}>
+                    <CompleteButton onClick={handleShowPreview}>
+                        Complete (Preview)
+                    </CompleteButton>
+                </div>
             </SidebarSection>
 
             <PreviewModal

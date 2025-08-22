@@ -325,9 +325,22 @@ router.post('/create-wallet', isAuthenticated, async (req, res) => {
 
         console.log(`✅ 지갑 생성 완료: ${currentUser.display_name} (${eoaAddress.slice(0, 8)}...)`);
 
+        // 환영 AXC 100 지급 (스마트 계정으로)
+        try {
+            const contractManager = require('../utils/contractManager');
+            const welcome = await contractManager.grantWelcomeAxc(eoaAddress, '100');
+            if (welcome.success) {
+                console.log(`🎁 AXC 100 지급 완료 → ${welcome.account}`);
+            } else {
+                console.log('AXC 지급 실패:', welcome.error);
+            }
+        } catch (e) {
+            console.log('AXC 지급 처리 중 오류:', e.message);
+        }
+
         res.json({ 
             success: true, 
-            message: '지갑이 성공적으로 생성되었습니다.',
+            message: 'Wallet created successfully! You received 100 AXC to try the marketplace.',
             eoaAddress: eoaAddress
         });
 

@@ -1,5 +1,10 @@
-export {default as PixelEditorPage} from "./PixelEditorPage";
-export {default as MainPage} from "./MainPage";
-export {default as AIDraftPage} from "./AIDraftPage";
-export {default as VotingPage} from "./VotingPage";
-export {default as VoteDetailPage} from "./VoteDetailPage";
+export { default as PixelEditorPage } from './PixelEditorPage';
+export { default as MainPage } from './MainPage';
+export { default as AIDraftPage } from './AIDraftPage';
+export { default as VotingPage } from './VotingPage';
+export { default as VoteDetailPage } from './VoteDetailPage';
+export { default as NFTDetailPage } from './NFTDetailPage';
+export { default as ProfilePage } from './ProfilePage';
+export { default as LoginPage } from './LoginPage';
+export { default as BlankCanvasPage } from './BlankCanvasPage';
+export { default as NFTsPage } from './NFTsPage';

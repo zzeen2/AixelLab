@@ -33,10 +33,12 @@ contract EntryPoint {
             if (op.paymasterAndData.length >= 20) {
                 address paymaster = address(bytes20(op.paymasterAndData[:20]));
                 uint maxCost = op.callGasLimit * op.maxFeePerGas;
+                
+                // 하드코딩된 Paymaster 호출
                 (bool success,) = paymaster.call(
                     abi.encodeWithSignature("validatePaymasterUserOp(address,uint256)", op.sender, maxCost)
                 );
-                require(success, "Paymaster failed");
+                require(success, "Paymaster validation failed");
             }
 
             // 서명 검증
@@ -51,6 +53,18 @@ contract EntryPoint {
             (bool execSuccess,) = op.sender.call{gas: op.callGasLimit}(op.callData);
             if (execSuccess) {
                 nonces[op.sender]++;
+                
+                // Paymaster postOp 호출 (있는 경우)
+                if (op.paymasterAndData.length >= 20) {
+                    address paymaster = address(bytes20(op.paymasterAndData[:20]));
+                    uint actualGasCost = op.callGasLimit * op.maxFeePerGas;
+                    
+                    // 하드코딩된 postOp 호출
+                    (bool postOpSuccess,) = paymaster.call(
+                        abi.encodeWithSignature("postOp(uint8,bytes,uint256)", 0, "", actualGasCost)
+                    );
+                    // postOp 실패는 무시 (가스비는 이미 지불됨)
+                }
             }
         }
     }
@@ -72,8 +86,7 @@ contract EntryPoint {
             op.preverificationGas,
             op.maxFeePerGas,
             op.maxPriorityFeePerGas,
-            keccak256(op.paymasterAndData),
-            keccak256(op.signature)
+            keccak256(op.paymasterAndData)
         ));
     }
 

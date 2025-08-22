@@ -11,52 +11,66 @@ const ModalOverlay = styled.div`
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 1001;
 `;
 
 const ModalContainer = styled.div`
     background-color: #0d1017;
-    border-radius: 12px;
-    width: 100%;
-    max-width: 1100px;
+    border-radius: 16px;
+    width: 95%;
+    max-width: 1400px;
     max-height: 90vh;
     overflow-y: auto;
     position: relative;
-    border: 1px solid #2a2a2a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+    
+    /* 스크롤바 숨기기 */
+    &::-webkit-scrollbar {
+        display: none;
+    }
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 `;
 
 const ModalHeader = styled.div`
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 7px 7px 0 10px;
-    border-bottom: 1px solid #2a2a2a;
-    padding-bottom: 7px;
+    padding: 16px 32px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 `;
 
 const CloseButton = styled.button`
     background: none;
-    border: none;
-    color: #8b949e;
-    font-size: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 18px;
     cursor: pointer;
-    padding: 8px;
+    padding: 6px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    width: 32px;
+    height: 32px;
     
     &:hover {
-        // background-color: #2a2a2a;
+        background-color: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.4);
         color: #ffffff;
+        transform: scale(1.05);
     }
 `;
 
 const ModalContent = styled.div`
     display: flex;
     padding: 32px;
-    gap: 50px;
+    gap: 60px;
+    min-height: 600px;
 `;
 
 const LeftSection = styled.div`
@@ -71,32 +85,40 @@ const RightSection = styled.div`
 `;
 
 const Title = styled.h1`
-    font-size: 32px;
-    font-weight: 600;
+    font-size: 36px;
+    font-weight: 700;
     color: #ffffff;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    background: linear-gradient(135deg, #8b5cf6, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 `;
 
 const GuideText = styled.p`
-    color: #8b949e;
-    font-size: 14px;
-    margin-bottom: 16px;
-    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 16px;
+    margin-bottom: 20px;
+    line-height: 1.6;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 `;
 
 const GuideButton = styled.button`
-    background-color: #2a2a2a;
+    background-color: rgba(255, 255, 255, 0.1);
     color: #ffffff;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 12px 20px;
+    border-radius: 12px;
     font-size: 14px;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     
     &:hover {
-        background-color: #3a3a3a;
+        background-color: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.3);
+        transform: translateY(-1px);
     }
 `;
 
@@ -257,18 +279,27 @@ const GradientBackground = styled.div`
 const CreateArtworkModal = ({ isOpen, onClose, onSelectOption }) => {
     if (!isOpen) return null;
 
-    const handleAIDraft = () => {
+    const handleAIDraft = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
         onSelectOption('ai-draft');
         onClose();
     };
 
-    const handleBlankCanvas = () => {
+    const handleBlankCanvas = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
         onSelectOption('blank-canvas');
         onClose();
     };
 
+    const handleOverlayClick = (e) => {
+        e.stopPropagation();
+        onClose();
+    };
+
     return (
-        <ModalOverlay onClick={onClose}>
+        <ModalOverlay onClick={handleOverlayClick}>
             <ModalContainer onClick={(e) => e.stopPropagation()}>
                 <ModalHeader>
                     <div></div>

@@ -5,6 +5,7 @@ import { SearchBar } from "../molecules";
 import { useNavigate } from 'react-router-dom';
 import { getCurrentUser, requestMetaMaskMessage, verifyMetaMaskSignature } from '../../api/auth';
 import UserAvatar from '../atoms/ui/UserAvatar';
+import { ethers } from 'ethers';
 
 const HeaderContainer = styled.div`
     display: flex;
@@ -12,7 +13,9 @@ const HeaderContainer = styled.div`
     align-items: center;
     height: 100%;
     padding: 0 24px;
-    background-color: #1a1a1a;
+    background-color: #0d1017;
+    border-bottom: 1px solid var(--border-primary);
+    box-shadow: var(--shadow-sm);
 `;
 
 const Left = styled.div`
@@ -23,8 +26,8 @@ const Left = styled.div`
 
 const Center = styled.div`
     flex: 1;
-    max-width: 500px;
-    margin: 0 40px;
+    margin-left: 40px;
+    margin-right: 40px;
 `;
 
 const Right = styled.div`
@@ -32,15 +35,45 @@ const Right = styled.div`
     align-items: center;
     gap: 16px;
     position: relative;
+    padding-right: 24px;
 `;
 
-const TokenBalance = styled.div`
+const UserStats = styled.div`
     display: flex;
     align-items: center;
-    gap: 12px;
-    color: #ffffff;
+    color: var(--text-secondary);
     font-size: 14px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+`;
+
+const Divider = styled.div`
+    width: 1px;
+    height: 20px;
+    background-color: rgba(255, 255, 255, 0.1);
+    margin: 0 12px;
+`;
+
+const StatItem = styled.div`
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s;
+    cursor: pointer;
+    
+    &:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+`;
+
+const StatValue = styled.span`
+    font-weight: 600;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    color: var(--text-primary);
+    font-size: 14px;
 `;
 
 const BalanceItem = styled.span`
@@ -56,13 +89,11 @@ const ProfileIcon = styled.div`
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px solid #333;
     transition: all 0.2s;
-    background: #2a2a2a;
     
     &:hover {
-        border-color: #8b5cf6;
         transform: scale(1.05);
+        box-shadow: var(--shadow-md);
     }
 `;
 
@@ -76,7 +107,7 @@ const ProfileImage = styled.img`
 const QuestionMark = styled.div`
     font-size: 20px;
     font-weight: bold;
-    color: #999;
+    color: var(--text-tertiary);
 `;
 
 const LoginModal = styled.div`
@@ -316,6 +347,14 @@ const Header = () => {
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
+    // 사용자 통계 가져오기
+    useEffect(() => {
+        if (userInfo) {
+            fetchUserStats();
+            fetchWalletBalance();
+        }
+    }, [userInfo]);
+
     // 모달 외부 클릭 감지
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -447,27 +486,139 @@ const Header = () => {
         }
     };
 
+    const [userStats, setUserStats] = useState({
+        nftCount: 0,
+        voteCount: 0,
+        artworkCount: 0,
+        ethBalance: '0.00',
+        wethBalance: '0.00'
+    });
+
+    // 사용자 통계 가져오기
+    const fetchUserStats = async () => {
+        if (!userInfo) return;
+        
+        try {
+            // 실제 API 호출로 교체 가능
+            // const response = await fetch('/api/user/stats');
+            // const stats = await response.json();
+            
+            // 임시 더미 데이터
+            setUserStats({
+                nftCount: Math.floor(Math.random() * 10),
+                voteCount: Math.floor(Math.random() * 50),
+                artworkCount: Math.floor(Math.random() * 20),
+                ethBalance: (Math.random() * 2).toFixed(4),
+                wethBalance: (Math.random() * 1).toFixed(4)
+            });
+        } catch (error) {
+            console.error('사용자 통계 가져오기 실패:', error);
+        }
+    };
+
+    // 주소 유효성 보장: 공백 제거 후 체크섬 주소로 정규화, 실패 시 null 반환
+    const normalizeAddress = (maybeAddress) => {
+        try {
+            if (!maybeAddress) return null;
+            const trimmed = String(maybeAddress).trim();
+            return ethers.getAddress(trimmed);
+        } catch {
+            return null;
+        }
+    };
+
+    // 지갑 잔액 가져오기 (로그인 타입별 분기)
+    const fetchWalletBalance = async () => {
+        if (!userInfo) return;
+        try {
+            const hasProvider = typeof window.ethereum !== 'undefined';
+
+            // 표시할 주소 결정
+            const displayAddress = userInfo.login_type === 'google'
+                ? (userInfo.eoa_address || userInfo.wallet_address)
+                : userInfo.wallet_address;
+
+            const normalizedDisplay = normalizeAddress(displayAddress);
+            if (!normalizedDisplay || normalizedDisplay === '0x0000000000000000000000000000000000000000') {
+                setUserStats(prev => ({ ...prev, ethBalance: '0.00' }));
+                return;
+            }
+
+            if (hasProvider) {
+                // 메타마스크 로그인: 현재 연결 계정의 잔액
+                if (userInfo.login_type === 'metamask') {
+                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                    if (accounts.length > 0) {
+                        const accountAddr = normalizeAddress(accounts[0]);
+                        if (!accountAddr) throw new Error('Invalid MetaMask account address');
+                        const balance = await window.ethereum.request({
+                            method: 'eth_getBalance',
+                            params: [accountAddr, 'latest']
+                        });
+                        const ethBalance = (parseInt(balance, 16) / 1e18).toFixed(4);
+                        setUserStats(prev => ({ ...prev, ethBalance }));
+                        return;
+                    }
+                }
+
+                // 구글 로그인: 해당 사용자의 지갑 주소로 직접 잔액 조회
+                const balance = await window.ethereum.request({
+                    method: 'eth_getBalance',
+                    params: [normalizedDisplay, 'latest']
+                });
+                const ethBalance = (parseInt(balance, 16) / 1e18).toFixed(4);
+                setUserStats(prev => ({ ...prev, ethBalance }));
+            } else {
+                // Provider 없음: 잔액 조회 불가
+                setUserStats(prev => ({ ...prev, ethBalance: '0.00' }));
+            }
+        } catch (error) {
+            console.error('지갑 잔액 가져오기 실패:', error);
+            setUserStats(prev => ({ ...prev, ethBalance: '0.00' }));
+        }
+    };
+
     const formatWalletAddress = (address) => {
         if (!address || address === '0x0000000000000000000000000000000000000000') {
             return 'No wallet connected';
         }
         return `${address.slice(0, 6)}...${address.slice(-4)}`;
     };
+
+    const getDisplayAddress = () => {
+        if (!userInfo) return '';
+        return userInfo.login_type === 'google'
+            ? (userInfo.eoa_address || userInfo.wallet_address || '')
+            : (userInfo.wallet_address || '');
+    };
     
     return (
         <HeaderContainer>
             <Left>
             </Left>
-            <Center>
+            <div style={{ marginLeft: '80px' }}>
                 <SearchBar />
+            </div>
+            <Center>
             </Center>
             <Right>
-                <TokenBalance>
-                    <BalanceItem>0.00 ETH</BalanceItem>
-                    <BalanceItem>0.00 WETH</BalanceItem>
-                </TokenBalance>
-                <NetworkInfo />
-                <WalletInfo />
+                {userInfo ? (
+                    <UserStats>
+                        <StatItem>
+                            <StatValue>{userStats.ethBalance} ETH</StatValue>
+                        </StatItem>
+                        <Divider />
+                        <StatItem>
+                            <StatValue>{formatWalletAddress(getDisplayAddress())}</StatValue>
+                        </StatItem>
+                    </UserStats>
+                ) : (
+                    <UserStats>
+                        <StatItem>
+                            <StatValue>Connect to start</StatValue>
+                        </StatItem>
+                    </UserStats>
+                )}
                 <div ref={modalRef}>
                     <ProfileIcon onClick={handleProfileClick}>
                         {userInfo ? (

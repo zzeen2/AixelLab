@@ -31,11 +31,19 @@ router.get('/', async (req, res) => {
 // 투표 상세 조회
 router.get('/:id', async (req, res) => {
     try {
+        const currentUser = await getCurrentUser(req);
+        
         const proposal = await db.Proposal.findByPk(req.params.id, {
             include: [
                 {
                     model: db.Artwork,
-                    as: 'artwork'
+                    as: 'artwork',
+                    include: [
+                        {
+                            model: db.User,
+                            as: 'User'
+                        }
+                    ]
                 },
                 {
                     model: db.Vote,
@@ -48,7 +56,29 @@ router.get('/:id', async (req, res) => {
             return res.status(404).json({ error: 'Proposal not found' });
         }
 
-        res.json(proposal);
+        // 현재 사용자의 투표 상태 확인
+        let userVote = null;
+        if (currentUser) {
+            console.log('Checking vote for user:', currentUser.userId, 'proposal:', req.params.id);
+            const userVoteRecord = await db.Vote.findOne({
+                where: {
+                    proposal_id_fk: req.params.id,
+                    voter_user_id_fk: currentUser.userId
+                }
+            });
+            console.log('User vote record:', userVoteRecord);
+            if (userVoteRecord) {
+                userVote = userVoteRecord.vote_type;
+                console.log('User vote type:', userVote);
+            }
+        }
+
+        // 응답에 사용자 투표 상태 추가
+        const response = proposal.toJSON();
+        response.userVote = userVote;
+        console.log('Final response userVote:', response.userVote);
+
+        res.json(response);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to fetch proposal' });
@@ -168,11 +198,21 @@ router.post('/:id/mint', async (req, res) => {
             return res.status(400).json({ error: '작가 지갑 주소를 찾을 수 없습니다.' });
         }
 
-        // 트랜잭션 지갑 생성 (Google 사용자경우)
-        let transactionWallet = null;
-        if (currentUser.loginType === 'google' && password) {
-            const { createPasswordBasedEOA } = require('../utils/walletGenerator');
-            transactionWallet = createPasswordBasedEOA(currentUser.user.google_id, password);
+        // 사용자 타입 결정
+        const userType = currentUser.loginType === 'google' ? 'google' : 'metamask';
+
+        // 구글 사용자: 비밀번호 기반 월렛 생성하여 서버 서명에 사용
+        let signerOrSignature = null;
+        if (userType === 'google') {
+            if (!password) {
+                return res.status(400).json({ error: '구글 로그인 사용자는 비밀번호가 필요합니다.' });
+            }
+            const { createPasswordBasedWallet } = require('../utils/walletGenerator');
+            // provider는 서명에는 필수가 아니지만, 일관성을 위해 서버 provider를 사용하지 않고 로컬 월렛 사용
+            signerOrSignature = createPasswordBasedWallet(currentUser.user.google_id, password);
+        } else {
+            // 메타마스크 사용자: 클라이언트에서 전달한 서명 사용
+            signerOrSignature = req.body.signature || null;
         }
 
         // tokenURI 설정 - 실제 IPFS 메타데이터 URI 사용
@@ -185,11 +225,20 @@ router.post('/:id/mint', async (req, res) => {
             proposalId,
             tokenURI,
             thresholdResult.voteCount,
-            transactionWallet
+            signerOrSignature,
+            userType
         );
 
         if (!mintResult.success) {
             return res.status(500).json({ error: `민팅 실패: ${mintResult.error}` });
+        }
+
+        // 작품 상태 업데이트
+        if (proposal.artwork) {
+            await proposal.artwork.update({
+                status: 'minted',
+                token_id: mintResult.tokenId || null
+            });
         }
 
         // 제안서 업데이트
@@ -211,6 +260,172 @@ router.post('/:id/mint', async (req, res) => {
     } catch (error) {
         console.error('Error executing minting:', error);
         res.status(500).json({ error: '민팅 실행 중 오류가 발생했습니다.' });
+    }
+});
+
+// 메타마스크 사용자를 위한 UserOperation 서명 API
+router.post('/:id/sign-userop', async (req, res) => {
+    try {
+        const currentUser = await getCurrentUser(req);
+        if (!currentUser) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+
+        const proposalId = req.params.id;
+        const { signature } = req.body;
+
+        if (!signature) {
+            return res.status(400).json({ error: '서명이 필요합니다.' });
+        }
+
+        // 제안서 조회
+        const proposal = await db.Proposal.findByPk(proposalId, {
+            include: [
+                {
+                    model: db.User,
+                    as: 'author'
+                },
+                {
+                    model: db.Artwork,
+                    as: 'artwork'
+                }
+            ]
+        });
+
+        if (!proposal) {
+            return res.status(404).json({ error: 'Proposal not found' });
+        }
+
+        // 작가 권한 확인
+        if (proposal.author.id !== currentUser.userId) {
+            return res.status(403).json({ error: "작품 작가만 서명할 수 있습니다." });
+        }
+
+        // 투표 임계값 확인
+        const thresholdResult = await checkVoteThreshold(proposalId);
+        if (!thresholdResult.readyForMinting) {
+            return res.status(400).json({ 
+                error: "민팅 조건이 충족되지 않았습니다." 
+            });
+        }
+
+        // 작가 지갑 주소 가져오기
+        const artistAddress = await getArtistWalletAddress(currentUser.user);
+        if (!artistAddress) {
+            return res.status(400).json({ error: '작가 지갑 주소를 찾을 수 없습니다.' });
+        }
+
+        // tokenURI 설정
+        const tokenURI = proposal.artwork?.metadata_ipfs_uri || proposal.artwork_url || `ipfs://QmDefaultTokenURI_${proposalId}`;
+
+        // 민팅 실행 (메타마스크 사용자)
+        const mintResult = await contractManager.mintApprovedArtwork(
+            artistAddress,
+            proposalId,
+            tokenURI,
+            thresholdResult.voteCount,
+            signature,
+            'metamask'
+        );
+
+        if (!mintResult.success) {
+            return res.status(500).json({ error: `민팅 실패: ${mintResult.error}` });
+        }
+
+        // 작품 상태 업데이트
+        if (proposal.artwork) {
+            await proposal.artwork.update({
+                status: 'minted',
+                token_id: mintResult.tokenId || null
+            });
+        }
+
+        // 제안서 업데이트
+        await proposal.update({
+            nft_minted: true,
+            nft_token_id: mintResult.tokenId || null,
+            nft_transaction_hash: mintResult.transactionHash,
+            minted_at: new Date(),
+            artist_wallet_address: artistAddress
+        });
+
+        res.json({
+            success: true,
+            message: 'NFT 민팅이 완료되었습니다.',
+            transactionHash: mintResult.transactionHash,
+            tokenId: mintResult.tokenId
+        });
+
+    } catch (error) {
+        console.error('Error executing minting with signature:', error);
+        res.status(500).json({ error: '민팅 실행 중 오류가 발생했습니다.' });
+    }
+});
+
+// UserOperation Hash 생성 API
+router.post('/:id/userop-hash', async (req, res) => {
+    try {
+        const currentUser = await getCurrentUser(req);
+        if (!currentUser) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+
+        const proposalId = req.params.id;
+        const { userOp } = req.body;
+
+        if (!userOp) {
+            return res.status(400).json({ error: 'UserOperation이 필요합니다.' });
+        }
+
+        // 제안서 조회
+        const proposal = await db.Proposal.findByPk(proposalId, {
+            include: [
+                {
+                    model: db.User,
+                    as: 'author'
+                },
+                {
+                    model: db.Artwork,
+                    as: 'artwork'
+                }
+            ]
+        });
+
+        if (!proposal) {
+            return res.status(404).json({ error: 'Proposal not found' });
+        }
+
+        // 작가 권한 확인
+        if (proposal.author.id !== currentUser.userId) {
+            return res.status(403).json({ error: "작품 작가만 접근할 수 있습니다." });
+        }
+
+        // 투표 임계값 확인
+        const thresholdResult = await checkVoteThreshold(proposalId);
+        if (!thresholdResult.readyForMinting) {
+            return res.status(400).json({ 
+                error: "민팅 조건이 충족되지 않았습니다." 
+            });
+        }
+
+        // 작가 지갑 주소 가져오기
+        const artistAddress = await getArtistWalletAddress(currentUser.user);
+        if (!artistAddress) {
+            return res.status(400).json({ error: '작가 지갑 주소를 찾을 수 없습니다.' });
+        }
+
+        // UserOperation Hash 생성
+        const contractManager = require('../utils/contractManager');
+        const userOpHash = await contractManager.getUserOpHash(userOp);
+
+        res.json({
+            success: true,
+            userOpHash: userOpHash
+        });
+
+    } catch (error) {
+        console.error('Error generating UserOperation hash:', error);
+        res.status(500).json({ error: 'UserOperation Hash 생성 중 오류가 발생했습니다.' });
     }
 });
 

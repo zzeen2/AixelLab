@@ -1,39 +1,54 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import {Header as HeaderComponent, Sidebar as SidebarComponent} from '../organism';
-import {Logo as LogoComponent} from '../atoms';
 
 const Container = styled.div`
     display: flex;
     flex-direction: column;
     height: 100vh;
     background-color: #0d1017;
-    overflow: hidden;
+    overflow: hidden; 
 `;
 
 const HeaderWrapper = styled.header`
     height: 50px;
-    background-color: #1a1a1a;
+    background-color: #0d1017;
     border-bottom: 1px solid #2a2a2a;
-    z-index: 100;
+    z-index: 998;
     position: fixed;
     top: 0;
-    left: ${props => props.isSidebarExpanded ? '180px' : '55px'};
+    left: 0;
     right: 0;
-    transition: left 0.3s ease;
+    transition: all 0.3s ease;
 `;
 
 const Body = styled.div`
     margin-top: 52px;
-    margin-left: ${props => props.isSidebarExpanded ? '180px' : '55px'};
+    margin-left: 64px;
     height: calc(100vh - 52px);
-    transition: margin-left 0.3s ease;
-    overflow: hidden;
+    transition: all 0.3s ease;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background-color: #0d1017;
+`;
+
+const Overlay = styled.div`
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: ${props => props.isSidebarExpanded ? 1 : 0};
+    visibility: ${props => props.isSidebarExpanded ? 'visible' : 'hidden'};
+    transition: all 0.3s ease;
+    pointer-events: ${props => props.isSidebarExpanded ? 'auto' : 'none'};
 `;
 
 const Sidebar = styled.aside`
-    width: 55px;
-    background-color: #1a1a1a;
+    width: ${props => props.isExpanded ? '240px' : '64px'};
+    background-color: #0d1017;
     border-right: 1px solid #2a2a2a;
     padding: 0;
     overflow: hidden;
@@ -42,37 +57,49 @@ const Sidebar = styled.aside`
     top: 0;
     left: 0;
     height: 100vh;
-    z-index: 101;
-
-    &:hover {
-        width: 180px;
-    }
+    z-index: 1000;
+    pointer-events: auto;
 `;
 
 const MainContent = styled.main`
     background-color: #0d1017;
     padding: 0;
-    overflow: hidden;
-    height: 100%;
+    overflow: visible;
+    min-height: 100%;
+    pointer-events: auto;
 `;
 
 const MainTemplate = ({ children }) => {
     const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
+    const handleSidebarMouseEnter = (e) => {
+        e.stopPropagation();
+        setIsSidebarExpanded(true);
+    };
+
+    const handleSidebarMouseLeave = (e) => {
+        e.stopPropagation();
+        setIsSidebarExpanded(false);
+    };
+
+    // 사이드바 상태를 안정적으로 유지
+    const stableSidebarState = isSidebarExpanded;
+
     return (
         <Container>
-            <LogoComponent isExpanded={isSidebarExpanded} />
+            <Overlay isSidebarExpanded={stableSidebarState} />
             <Sidebar
-                onMouseEnter={() => setIsSidebarExpanded(true)}
-                onMouseLeave={() => setIsSidebarExpanded(false)}
+                isExpanded={stableSidebarState}
+                onMouseEnter={handleSidebarMouseEnter}
+                onMouseLeave={handleSidebarMouseLeave}
             >
-                <SidebarComponent isExpanded={isSidebarExpanded} />
+                <SidebarComponent isExpanded={stableSidebarState} />
             </Sidebar>
-            <HeaderWrapper isSidebarExpanded={isSidebarExpanded}>
+            <HeaderWrapper isSidebarExpanded={stableSidebarState}>
                 <HeaderComponent />
             </HeaderWrapper>
-            <Body isSidebarExpanded={isSidebarExpanded}>
-                <MainContent>
+            <Body isSidebarExpanded={stableSidebarState}>
+                <MainContent onMouseEnter={handleSidebarMouseLeave}>
                     {children}
                 </MainContent>
             </Body>

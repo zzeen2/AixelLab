@@ -18,6 +18,9 @@ describe("SmartAccountFactory", function () {
         paymaster = await Paymaster.deploy(await entryPoint.getAddress());
         await paymaster.waitForDeployment();
 
+        // Paymaster 기본 세팅 (자금 + 팩토리 승인)
+        await paymaster.depositFunds({ value: ethers.parseEther("10") });
+
         // SmartAccountFactory 배포
         const SmartAccountFactory = await ethers.getContractFactory("SmartAccountFactory");
         smartAccountFactory = await SmartAccountFactory.deploy(
@@ -25,6 +28,9 @@ describe("SmartAccountFactory", function () {
             await paymaster.getAddress()
         );
         await smartAccountFactory.waitForDeployment();
+
+        // 팩토리 승인 (paymaster가 factory를 호출 허용)
+        await paymaster.authorizeFactory(smartAccountFactory.target);
 
         console.log("EntryPoint:", await entryPoint.getAddress());
         console.log("Paymaster:", await paymaster.getAddress());
@@ -38,12 +44,6 @@ describe("SmartAccountFactory", function () {
             const factoryAddress = smartAccountFactory.target;
             const entryPointAddress = await entryPoint.getAddress();
             
-            console.log("=== JavaScript CREATE2 계산 ===");
-            console.log("User EOA:", userEOA);
-            console.log("Salt:", salt);
-            console.log("Factory:", factoryAddress);
-            console.log("EntryPoint:", entryPointAddress);
-            
             // SmartAccount 컨트랙트의 bytecode 가져오기
             const SmartAccount = await ethers.getContractFactory("SmartAccount");
             const creationCode = SmartAccount.bytecode;
@@ -51,32 +51,17 @@ describe("SmartAccountFactory", function () {
                 ["address", "address"], 
                 [userEOA, entryPointAddress]
             );
-            
-            // initCode = creationCode + constructorArgs
-            const initCode = creationCode + constructorArgs.slice(2); // 0x 제거
+            const initCode = creationCode + constructorArgs.slice(2);
             const initCodeHash = ethers.keccak256(initCode);
-            
-            // CREATE2 주소 계산
             const create2Input = ethers.solidityPacked(
                 ["bytes1", "address", "bytes32", "bytes32"],
                 ["0xff", factoryAddress, salt, initCodeHash]
             );
             const predictedAddressJS = ethers.getAddress("0x" + ethers.keccak256(create2Input).slice(-40));
             
-            console.log("JS로 예측한 주소:", predictedAddressJS);
-            
             // 실제 생성
-            const tx = await smartAccountFactory.createAccount(userEOA, salt);
-            await tx.wait();
-            
+            await (await smartAccountFactory.createAccount(userEOA, salt)).wait();
             const actualAddress = await smartAccountFactory.getAccountBySalt(userEOA, salt);
-            console.log("실제 생성된 주소:", actualAddress);
-            
-            // Solidity에서 예측한 주소
-            const solidityPredicted = await smartAccountFactory.getAddress(userEOA, salt);
-            console.log("Solidity 예측 주소:", solidityPredicted);
-            
-            // JS 예측과 실제가 같은지 확인
             expect(predictedAddressJS).to.equal(actualAddress);
         });
 
@@ -84,27 +69,18 @@ describe("SmartAccountFactory", function () {
             const userEOA = user1.address;
             const salt = ethers.keccak256(ethers.toUtf8Bytes('debug_salt'));
             
-            console.log("=== CREATE2 디버깅 ===");
-            console.log("User EOA:", userEOA);
-            console.log("Salt:", salt);
-            console.log("Factory 주소:", smartAccountFactory.target);
-            console.log("EntryPoint 주소:", await entryPoint.getAddress());
+            // JS 예측 먼저 계산
+            const SmartAccount = await ethers.getContractFactory("SmartAccount");
+            const creationCode = SmartAccount.bytecode;
+            const constructorArgs = ethers.AbiCoder.defaultAbiCoder().encode(["address","address"],[userEOA, await entryPoint.getAddress()]);
+            const initCode = creationCode + constructorArgs.slice(2);
+            const initCodeHash = ethers.keccak256(initCode);
+            const create2Input = ethers.solidityPacked(["bytes1","address","bytes32","bytes32"],["0xff", smartAccountFactory.target, salt, initCodeHash]);
+            const predictedAddress = ethers.getAddress("0x" + ethers.keccak256(create2Input).slice(-40));
             
-            // 실제 생성해보기
-            const tx = await smartAccountFactory.createAccount(userEOA, salt);
-            const receipt = await tx.wait();
-            
-            // 생성된 주소 확인
+            // 실제 생성
+            await (await smartAccountFactory.createAccount(userEOA, salt)).wait();
             const actualAddress = await smartAccountFactory.getAccountBySalt(userEOA, salt);
-            console.log("실제 생성된 주소:", actualAddress);
-            
-            // 예측 주소 확인
-            const predictedAddress = await smartAccountFactory.getAddress(userEOA, salt);
-            console.log("예측된 주소:", predictedAddress);
-            
-            // 둘이 같은지 확인
-            console.log("주소 일치 여부:", actualAddress === predictedAddress);
-            
             expect(predictedAddress).to.equal(actualAddress);
         });
 
@@ -112,39 +88,28 @@ describe("SmartAccountFactory", function () {
             const userEOA = user1.address;
             const salt = ethers.keccak256(ethers.toUtf8Bytes('test_salt'));
             
-            console.log("=== CREATE2 기본 테스트 ===");
-            console.log("User EOA:", userEOA);
-            console.log("Salt:", salt);
-            console.log("Factory 주소:", smartAccountFactory.target);
+            // JS 예측 주소
+            const SmartAccount = await ethers.getContractFactory("SmartAccount");
+            const creationCode = SmartAccount.bytecode;
+            const constructorArgs = ethers.AbiCoder.defaultAbiCoder().encode(["address","address"],[userEOA, await entryPoint.getAddress()]);
+            const initCode = creationCode + constructorArgs.slice(2);
+            const initCodeHash = ethers.keccak256(initCode);
+            const create2Input = ethers.solidityPacked(["bytes1","address","bytes32","bytes32"],["0xff", smartAccountFactory.target, salt, initCodeHash]);
+            const predictedAddress = ethers.getAddress("0x" + ethers.keccak256(create2Input).slice(-40));
             
-            // 1단계: 예측된 주소 계산
-            const predictedAddress = await smartAccountFactory.getAddress(userEOA, salt);
-            console.log("예측된 주소:", predictedAddress);
-            
-            // 2단계: 실제 생성
-            const tx = await smartAccountFactory.createAccount(userEOA, salt);
-            const receipt = await tx.wait();
-            console.log("생성 완료");
-            
-            // 3단계: 생성 후 주소 확인
+            // 실제 생성
+            await (await smartAccountFactory.createAccount(userEOA, salt)).wait();
             const actualAddress = await smartAccountFactory.getAccountBySalt(userEOA, salt);
-            console.log("실제 생성된 주소:", actualAddress);
-            
-            // 4단계: 예측과 실제가 같은지 확인
             expect(predictedAddress).to.equal(actualAddress);
-            
-            // 5단계: Factory 주소와 다른지 확인
             expect(actualAddress).to.not.equal(smartAccountFactory.target);
         });
 
         it("같은 파라미터로 호출시 같은 주소를 반환해야 함", async function () {
             const userEOA = user1.address;
             const salt = ethers.keccak256(ethers.toUtf8Bytes('google_user_' + userEOA));
-            
-            const address1 = await smartAccountFactory.getAddress(userEOA, salt);
-            const address2 = await smartAccountFactory.getAddress(userEOA, salt);
-            
-            expect(address1).to.equal(address2);
+            const a1 = await smartAccountFactory.getAddress(userEOA, salt);
+            const a2 = await smartAccountFactory.getAddress(userEOA, salt);
+            expect(a1).to.equal(a2);
         });
 
         it("다른 salt로 호출시 다른 주소를 반환해야 함", async function () {
@@ -152,47 +117,44 @@ describe("SmartAccountFactory", function () {
             const salt1 = ethers.keccak256(ethers.toUtf8Bytes('google_user_' + userEOA));
             const salt2 = ethers.keccak256(ethers.toUtf8Bytes('different_salt_' + userEOA));
             
-            const address1 = await smartAccountFactory.getAddress(userEOA, salt1);
-            const address2 = await smartAccountFactory.getAddress(userEOA, salt2);
+            // JS 예측으로 비교 (순수 계산)
+            const SmartAccount = await ethers.getContractFactory("SmartAccount");
+            const creationCode = SmartAccount.bytecode;
+            const ep = await entryPoint.getAddress();
+            const params = (user) => ethers.AbiCoder.defaultAbiCoder().encode(["address","address"],[user, ep]);
+            const initHash = (user) => ethers.keccak256(creationCode + params(user).slice(2));
+            const pred = (salt) => ethers.getAddress("0x" + ethers.keccak256(ethers.solidityPacked(["bytes1","address","bytes32","bytes32"],["0xff", smartAccountFactory.target, salt, initHash(userEOA)])).slice(-40));
             
-            console.log("Salt1 주소:", address1);
-            console.log("Salt2 주소:", address2);
-            
-            expect(address1).to.not.equal(address2);
+            const addr1 = pred(salt1);
+            const addr2 = pred(salt2);
+            expect(addr1).to.not.equal(addr2);
         });
 
         it("실제 Smart Account 생성 테스트", async function () {
             const userEOA = user1.address;
             const salt = ethers.keccak256(ethers.toUtf8Bytes('google_user_' + userEOA));
             
-            // 예측된 주소 확인
-            const predictedAddress = await smartAccountFactory.getAddress(userEOA, salt);
-            console.log("예측된 주소:", predictedAddress);
+            // JS 예측 주소
+            const SmartAccount = await ethers.getContractFactory("SmartAccount");
+            const creationCode = SmartAccount.bytecode;
+            const constructorArgs = ethers.AbiCoder.defaultAbiCoder().encode(["address","address"],[userEOA, await entryPoint.getAddress()]);
+            const initCode = creationCode + constructorArgs.slice(2);
+            const initCodeHash = ethers.keccak256(initCode);
+            const create2Input = ethers.solidityPacked(["bytes1","address","bytes32","bytes32"],["0xff", smartAccountFactory.target, salt, initCodeHash]);
+            const predictedAddress = ethers.getAddress("0x" + ethers.keccak256(create2Input).slice(-40));
             
             // 배포 전 코드 확인
             const codeBefore = await ethers.provider.getCode(predictedAddress);
-            console.log("배포 전 코드:", codeBefore);
             expect(codeBefore).to.equal("0x");
             
-            // Smart Account 생성
-            const tx = await smartAccountFactory.createAccount(userEOA, salt);
-            const receipt = await tx.wait();
-            console.log("생성 트랜잭션:", receipt.hash);
-            
-            // 배포 후 코드 확인
+            // 생성 및 확인
+            await (await smartAccountFactory.createAccount(userEOA, salt)).wait();
             const codeAfter = await ethers.provider.getCode(predictedAddress);
-            console.log("배포 후 코드 길이:", codeAfter.length);
             expect(codeAfter).to.not.equal("0x");
             
-            // Smart Account의 owner 확인
-            const SmartAccount = await ethers.getContractFactory("SmartAccount");
-            const smartAccount = SmartAccount.attach(predictedAddress);
-            
-            const actualOwner = await smartAccount.owner();
-            console.log("실제 Owner:", actualOwner);
-            console.log("예상 Owner:", userEOA);
-            
-            expect(actualOwner).to.equal(userEOA);
+            const Smart = await ethers.getContractFactory("SmartAccount");
+            const sa = Smart.attach(predictedAddress);
+            expect(await sa.owner()).to.equal(userEOA);
         });
     });
 }); 

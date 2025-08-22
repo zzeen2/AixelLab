@@ -53,4 +53,18 @@ export const getNFTDetail = async (nftId) => {
         console.error('NFT 상세 정보 조회 실패:', error);
         throw new Error('NFT 상세 정보 조회 실패');
     }
+};
+
+// 작품 상세 정보 조회
+export const getArtworkDetail = async (artworkId) => {
+    try {
+        const response = await axios.get(`http://localhost:4000/artwork/${artworkId}`, {
+            withCredentials: true
+        });
+        console.log("api responce 상세: ", response)
+        return response.data;
+    } catch (error) {
+        console.error('작품 상세 정보 조회 실패:', error);
+        throw new Error('작품 상세 정보 조회 실패');
+    }
 }; 
