@@ -239,7 +239,99 @@ router.get('/eth-balance', async (req, res) => {
     // 프론트 최적화로 더 이상 ETH 잔액을 사용하지 않음. 즉시 0 반환
     return res.json({ success: true, balance: 0, balanceWei: '0', deprecated: true });
   } catch (e) {
-    res.json({ success: true, balance: 0, balanceWei: '0', deprecated: true });
+    res.json({ success: true, balance: 0, balance: 0, balanceWei: '0', deprecated: true });
+  }
+});
+
+// 모든 활성 리스팅 가져오기
+router.get('/listings', async (req, res) => {
+  try {
+    console.log('=== 모든 리스팅 조회 ===');
+    const result = await contractManager.getAllListings();
+    if (!result.success) return res.status(500).json({ error: result.error });
+    res.json({ success: true, listings: result.listings });
+  } catch (e) {
+    console.error('listings error:', e);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// NFT 구매
+router.post('/buy', async (req, res) => {
+  try {
+    const currentUser = await getCurrentUser(req);
+    if (!currentUser) return res.status(401).json({ error: 'Authentication required' });
+
+    const { tokenId, password } = req.body;
+    if (tokenId === undefined) return res.status(400).json({ error: 'tokenId is required' });
+
+    const userType = currentUser.loginType === 'google' ? 'google' : 'metamask';
+    let signerOrSig = null;
+    if (userType === 'google' && password) {
+      const { createPasswordBasedWallet } = require('../utils/walletGenerator');
+      signerOrSig = createPasswordBasedWallet(currentUser.user.google_id, password);
+    } else if (userType === 'metamask' && req.body.signature) {
+      signerOrSig = req.body.signature;
+    }
+
+    const rawAddress = userType === 'google'
+      ? (currentUser.user.eoa_address || currentUser.user.wallet_address)
+      : (currentUser.user.wallet_address || currentUser.user.eoa_address);
+    let buyerAddress;
+    try { buyerAddress = ethers.getAddress(String(rawAddress || '')); } catch { return res.status(400).json({ error: `invalid address: ${rawAddress}` }); }
+    
+    const result = await contractManager.buyNFT(buyerAddress, Number(tokenId), signerOrSig, userType);
+    if (!result.success) return res.status(500).json({ error: result.error || 'Buy failed' });
+
+    // 구매 완료 후 DB에 NFT 정보 저장
+    try {
+      console.log('=== 구매 완료 후 DB 저장 시작 ===');
+      
+      // 구매자의 Smart Account 주소 가져오기
+      const buyerSmartAccount = await contractManager.getOrCreateSmartAccount(buyerAddress);
+      if (!buyerSmartAccount.success) {
+        console.error('구매자 Smart Account 조회 실패:', buyerSmartAccount.error);
+      } else {
+        console.log('구매자 Smart Account:', buyerSmartAccount.smartAccount);
+        
+        // NFT 메타데이터 가져오기 (간단한 정보)
+        const nftData = {
+          title: `NFT #${tokenId}`,
+          description: '구매한 NFT',
+          image_ipfs_uri: '🎨', // 기본 이미지
+          status: 'minted',
+          token_id: tokenId,
+          contract_address: process.env.ARTWORK_NFT_ADDRESS,
+          creator: buyerSmartAccount.smartAccount, // 구매자가 소유자
+          owner_address: buyerSmartAccount.smartAccount,
+          is_purchased: true,
+          purchase_date: new Date(),
+          purchase_transaction_hash: result.transactionHash
+        };
+        
+        console.log('저장할 NFT 데이터:', nftData);
+        
+        // DB에 저장
+        const newNFT = await db.Artwork.create(nftData);
+        console.log('NFT DB 저장 완료:', newNFT.id);
+        
+        // 구매자 정보 업데이트
+        if (currentUser && currentUser.user) {
+          await currentUser.user.update({ 
+            smart_account_address: buyerSmartAccount.smartAccount 
+          });
+          console.log('구매자 Smart Account 주소 업데이트 완료');
+        }
+      }
+    } catch (dbError) {
+      console.error('DB 저장 실패:', dbError);
+      // DB 저장 실패해도 구매는 성공했으므로 계속 진행
+    }
+
+    res.json({ success: true, transactionHash: result.transactionHash });
+  } catch (e) {
+    console.error('buy error:', e);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

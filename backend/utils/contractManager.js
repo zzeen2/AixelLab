@@ -1026,6 +1026,141 @@ const getEthBalance = async (address) => {
     return { success: true, balanceWei: bal.toString(), balance: Number(ethers.formatEther(bal)) };
 };
 
+// 모든 활성 리스팅 가져오기
+const getAllListings = async () => {
+    if (!marketplace) return { success: false, error: 'Marketplace not initialized' };
+    try {
+        console.log('=== 모든 리스팅 조회 시작 ===');
+        
+        // 고정된 범위로 토큰 ID 검색 (1부터 100까지)
+        const maxTokenId = 100;
+        const activeListings = [];
+        
+        console.log(`토큰 ID 1부터 ${maxTokenId}까지 검색 중...`);
+        
+        // 각 토큰 ID에 대해 리스팅 상태 확인
+        for (let i = 1; i <= maxTokenId; i++) {
+            try {
+                const listing = await marketplace.listings(i);
+                if (listing.active) {
+                    console.log(`토큰 ${i} 활성 리스팅 발견:`, {
+                        seller: listing.seller,
+                        price: listing.price.toString()
+                    });
+                    
+                    // NFT 메타데이터도 함께 가져오기
+                    try {
+                        const tokenURI = await artworkNFT.tokenURI(i);
+                        const owner = await artworkNFT.ownerOf(i);
+                        
+                        activeListings.push({
+                            tokenId: i,
+                            seller: listing.seller,
+                            price: listing.price.toString(),
+                            priceFormatted: Number(ethers.formatUnits(listing.price, 6)), // AXC 단위로 변환
+                            active: listing.active,
+                            tokenURI,
+                            owner
+                        });
+                    } catch (metadataError) {
+                        console.log(`토큰 ${i} 메타데이터 조회 실패:`, metadataError.message);
+                        // 메타데이터 없어도 리스팅 정보는 추가
+                        activeListings.push({
+                            tokenId: i,
+                            seller: listing.seller,
+                            price: listing.price.toString(),
+                            priceFormatted: Number(ethers.formatUnits(listing.price, 6)),
+                            active: listing.active,
+                            tokenURI: null,
+                            owner: listing.seller
+                        });
+                    }
+                }
+            } catch (listingError) {
+                // 해당 토큰에 리스팅이 없으면 무시
+                continue;
+            }
+        }
+        
+        console.log(`활성 리스팅 ${activeListings.length}개 발견`);
+        return { success: true, listings: activeListings };
+    } catch (e) {
+        console.error('getAllListings error:', e);
+        return { success: false, error: e.message };
+    }
+};
+
+// NFT 구매
+const buyNFT = async (buyerAddress, tokenId, transactionWallet = null, userType = 'google') => {
+    try {
+        console.log('=== NFT 구매 시작 ===');
+        console.log('buyerAddress:', buyerAddress);
+        console.log('tokenId:', tokenId);
+        
+        // create/get smart account
+        const acc = await createGoogleUserAccount(buyerAddress);
+        if (!acc.success) return acc;
+        const sa = acc.accountAddress;
+        console.log('Smart Account:', sa);
+        
+        // 리스팅 정보 확인
+        const listing = await marketplace.listings(tokenId);
+        if (!listing.active) {
+            return { success: false, error: 'Listing is not active' };
+        }
+        
+        console.log('리스팅 정보:', {
+            seller: listing.seller,
+            price: listing.price.toString(),
+            active: listing.active
+        });
+        
+        // 가격을 AXC 단위로 변환
+        const priceUnits = listing.price;
+        console.log('구매 가격 (AXC units):', priceUnits.toString());
+        
+        // Smart Account의 AXC 잔액 확인
+        const axcBalance = await axcToken.balanceOf(sa);
+        console.log('Smart Account AXC 잔액:', ethers.formatUnits(axcBalance, 6));
+        
+        if (axcBalance < priceUnits) {
+            return { success: false, error: 'Insufficient AXC balance' };
+        }
+        
+        // Marketplace에 AXC 사용 권한 부여
+        const allowance = await axcToken.allowance(sa, MARKETPLACE_ADDRESS);
+        console.log('현재 AXC 승인량:', ethers.formatUnits(allowance, 6));
+        
+        if (allowance < priceUnits) {
+            console.log('AXC 승인 필요 - setApprovalForAll 실행');
+            const approveData = await axcToken.approve.populateTransaction(MARKETPLACE_ADDRESS, priceUnits);
+            const approveCallData = encodeExecute(AXC_ADDRESS, 0, approveData.data);
+            
+            const approveResult = await sendUserOpFromSmartAccount(sa, approveCallData, transactionWallet, userType);
+            if (!approveResult.success) {
+                return { success: false, error: 'AXC approval failed: ' + approveResult.error };
+            }
+            console.log('AXC 승인 완료');
+        }
+        
+        // NFT 구매 실행
+        console.log('=== NFT 구매 실행 ===');
+        const buyData = await marketplace.buy.populateTransaction(tokenId);
+        const buyCallData = encodeExecute(MARKETPLACE_ADDRESS, 0, buyData.data);
+        
+        const buyResult = await sendUserOpFromSmartAccount(sa, buyCallData, transactionWallet, userType);
+        if (!buyResult.success) {
+            return { success: false, error: 'Buy failed: ' + buyResult.error };
+        }
+        
+        console.log('NFT 구매 완료!');
+        return { success: true, transactionHash: buyResult.transactionHash };
+    } catch (e) {
+        console.error('buyNFT error:', e);
+        return { success: false, error: e.message };
+    }
+};
+
 module.exports = {
     initialize,
     createGoogleUserAccount,
@@ -1043,5 +1178,7 @@ module.exports = {
     getAxcBalance,
     getListing,
     getNFTOwner,
-    getEthBalance
+    getEthBalance,
+    getAllListings,
+    buyNFT
 };

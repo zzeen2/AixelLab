@@ -252,6 +252,20 @@ const TabButton = styled(FilterButton)`
   color: ${props => props.active ? '#ffffff' : 'rgba(255, 255, 255, 0.8)'};
 `;
 
+const SubTabButton = styled(FilterButton)`
+  background: ${props => props.active ? '#ec4899' : 'rgba(255, 255, 255, 0.03)'};
+  border-color: ${props => props.active ? '#ec4899' : 'rgba(255, 255, 255, 0.08)'};
+  color: ${props => props.active ? '#ffffff' : 'rgba(255, 255, 255, 0.7)'};
+  font-size: 12px;
+  padding: 6px 12px;
+  margin-right: 8px;
+  
+  &:hover {
+    background: ${props => props.active ? '#ec4899' : 'rgba(255, 255, 255, 0.08)'};
+    border-color: ${props => props.active ? '#ec4899' : 'rgba(255, 255, 255, 0.15)'};
+  }
+`;
+
 const FilterRow = styled.div`
   display: flex;
   gap: 8px;
@@ -618,6 +632,7 @@ const ProfilePage = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [activeTab, setActiveTab] = useState('all');
+    const [activeSubTab, setActiveSubTab] = useState(null); // 서브 탭 상태 추가
     
     // URL 파라미터에서 탭 정보 읽기
     useEffect(() => {
@@ -672,8 +687,6 @@ const ProfilePage = () => {
         switch (activeTab) {
             case 'all':
                 return artworks;
-            case 'pending':
-                return artworks.filter(a => a.status === 'pending' || a.status === 'approved');
             case 'mynfts':
                 return artworks.filter(a => a.status === 'minted' && (!!a.owner_address ? a.owner_address?.toLowerCase() === userInfo?.wallet_address?.toLowerCase() : true));
             case 'onSale':
@@ -703,8 +716,8 @@ const ProfilePage = () => {
     // 탭 카운트 미리 계산
     const tabCounts = {
         all: artworks.length,
-        pending: artworks.filter(a => a.status === 'pending' || a.status === 'approved').length,
-        mynfts: artworks.filter(a => a.status === 'minted' && (!!a.owner_address ? a.owner_address?.toLowerCase() === userInfo?.wallet_address?.toLowerCase() : true)).length,
+        myartworks: artworks.filter(a => a.status === 'minted' && !a.is_purchased).length, // 생성한 작품만
+        mynfts: mintedNFTs.length, // 소유한 모든 NFT (생성한 것 + 구매한 것)
         onSale: artworks.filter(a => a.status === 'minted' && a.token_id != null && typeof a.token_id === 'number' && listingByToken[a.token_id]?.active).length,
         rejected: artworks.filter(a => a.status === 'failed').length
     };
@@ -870,12 +883,13 @@ const ProfilePage = () => {
         }
     };
 
-    // 민팅된 NFT 목록 조회
+    // 민팅된 NFT 목록 조회 (DB에서 가져오기)
     const fetchMintedNFTs = async () => {
         try {
             const response = await getMintedNFTs();
             if (response.success) {
-                setMintedNFTs(response.minted_nfts);
+                console.log('DB에서 가져온 NFT 목록:', response.minted_nfts);
+                setMintedNFTs(response.minted_nfts || []);
             }
         } catch (error) {
             console.error('민팅된 NFT 조회 실패:', error);
@@ -993,25 +1007,39 @@ const ProfilePage = () => {
                     setUserInfo(JSON.parse(userInfo));
                     if (JSON.parse(userInfo).login_type === 'google') {
                         const wallet = await fetchWalletStatus();
-                        // Smart Account 및 AXC 잔액 조회 (응답값 기준)
-                        const eoa = JSON.parse(userInfo).eoa_address || wallet?.eoaAddress;
-                        if (eoa) {
-                            try {
-                                // 배포 여부만 확인 (생성 트랜잭션 발생 안 함)
-                                const saPred = await getSmartAccountPredict(eoa);
-                                if (saPred.success) {
-                                    setSmartAccount(saPred.smartAccount);
-                                    if (saPred.deployed) {
-                                        const balRes = await getAxcBalance(saPred.smartAccount);
-                                        if (balRes.success) setAxcBalance(Number(balRes.balance).toFixed(2));
-                                    } else {
-                                        setAxcBalance('0.00');
-                                    }
+                                        // Smart Account 및 AXC 잔액 조회 (응답값 기준)
+                const eoa = JSON.parse(userInfo).eoa_address || wallet?.eoaAddress;
+                if (eoa) {
+                    try {
+                        // Smart Account 주소 강제 업데이트
+                        const saRes = await getSmartAccount(eoa);
+                        if (saRes.success) {
+                            setSmartAccount(saRes.smartAccount);
+                            console.log('Smart Account 업데이트됨:', saRes.smartAccount);
+                            
+                            // AXC 잔액 조회
+                            const balRes = await getAxcBalance(saRes.smartAccount);
+                            if (balRes.success) {
+                                setAxcBalance(Number(balRes.balance).toFixed(2));
+                                console.log('AXC 잔액 업데이트됨:', balRes.balance);
+                            }
+                        } else {
+                            // 예측 모드로 폴백
+                            const saPred = await getSmartAccountPredict(eoa);
+                            if (saPred.success) {
+                                setSmartAccount(saPred.smartAccount);
+                                if (saPred.deployed) {
+                                    const balRes = await getAxcBalance(saPred.smartAccount);
+                                    if (balRes.success) setAxcBalance(Number(balRes.balance).toFixed(2));
+                                } else {
+                                    setAxcBalance('0.00');
                                 }
-                            } catch (e) {
-                                console.log('AXC balance fetch failed');
                             }
                         }
+                    } catch (e) {
+                        console.log('AXC balance fetch failed');
+                    }
+                }
                     }
                 }
 
@@ -1109,8 +1137,20 @@ const ProfilePage = () => {
                                                             }}
                                                             title="클릭하여 전체 주소 복사"
                                                         >
-                                                            {walletStatus.eoaAddress || 'loading...'}
+                                                            EOA: {walletStatus.eoaAddress || 'loading...'}
                                                         </WalletAddress>
+                                                        {smartAccount && (
+                                                            <WalletAddress
+                                                                onClick={() => {
+                                                                    navigator.clipboard.writeText(smartAccount);
+                                                                    alert('Smart Account 주소가 복사되었습니다!');
+                                                                }}
+                                                                title="클릭하여 Smart Account 주소 복사"
+                                                                style={{ color: '#8b5cf6', fontSize: '14px' }}
+                                                            >
+                                                                Smart Account: {smartAccount}
+                                                            </WalletAddress>
+                                                        )}
                                                         <WalletStatus>✓ 지갑 사용 가능</WalletStatus>
                                                     </div>
                                                 ) : (
@@ -1179,17 +1219,24 @@ const ProfilePage = () => {
                         >
                             All ({tabCounts.all})
                         </TabButton>
+
                         <TabButton
-                            active={activeTab === 'pending'}
-                            onClick={() => setActiveTab('pending')}
+                            active={activeTab === 'myartworks'}
+                            onClick={() => {
+                                setActiveTab('myartworks');
+                                setActiveSubTab(null);
+                            }}
                         >
-                            Pending ({tabCounts.pending})
+                            🎨 My Artworks ({tabCounts.myartworks})
                         </TabButton>
                         <TabButton
                             active={activeTab === 'mynfts'}
-                            onClick={() => setActiveTab('mynfts')}
+                            onClick={() => {
+                                setActiveTab('mynfts');
+                                setActiveSubTab(null);
+                            }}
                         >
-                            My NFTs ({tabCounts.mynfts})
+                            🪙 My NFTs ({tabCounts.mynfts})
                         </TabButton>
                         <TabButton
                             active={activeTab === 'onSale'}
@@ -1221,18 +1268,179 @@ const ProfilePage = () => {
                             Rejected ({tabCounts.rejected})
                         </TabButton>
                     </FilterRow>
+                    
+                    {/* 서브 탭 표시 */}
+                    {(activeTab === 'myartworks' || activeTab === 'mynfts') && (
+                        <FilterRow style={{ marginTop: '8px', paddingLeft: '32px' }}>
+                            {activeTab === 'myartworks' && (
+                                <>
+                                    <SubTabButton
+                                        active={activeSubTab === 'pending'}
+                                        onClick={() => setActiveSubTab('pending')}
+                                    >
+                                        📝 Pending ({artworks.filter(a => a.status === 'pending').length})
+                                    </SubTabButton>
+                                    <SubTabButton
+                                        active={activeSubTab === 'approved'}
+                                        onClick={() => setActiveSubTab('approved')}
+                                    >
+                                        ✅ Approved ({artworks.filter(a => a.status === 'approved').length})
+                                    </SubTabButton>
+                                    <SubTabButton
+                                        active={activeSubTab === 'minted'}
+                                        onClick={() => setActiveSubTab('minted')}
+                                    >
+                                        🪙 Minted ({artworks.filter(a => a.status === 'minted' && !a.is_purchased).length})
+                                    </SubTabButton>
+                                </>
+                            )}
+                            {activeTab === 'mynfts' && (
+                                <>
+                                    <SubTabButton
+                                        active={activeSubTab === 'created'}
+                                        onClick={() => setActiveSubTab('created')}
+                                    >
+                                        🎨 Created ({artworks.filter(a => a.status === 'minted' && !a.is_purchased).length})
+                                    </SubTabButton>
+                                    <SubTabButton
+                                        active={activeSubTab === 'purchased'}
+                                        onClick={() => setActiveSubTab('purchased')}
+                                    >
+                                        💰 Purchased ({mintedNFTs.filter(nft => nft.is_purchased).length})
+                                    </SubTabButton>
+                                </>
+                            )}
+                        </FilterRow>
+                    )}
                 </SearchSection>
 
                 <MainContent>
                     <ArtworkGrid>
                         <GridHeader>
-                            <ResultCount>{filteredArtworks.length} items</ResultCount>
+                            <ResultCount>
+                                {activeTab === 'mynfts' ? mintedNFTs.length : filteredArtworks.length} items
+                            </ResultCount>
                         </GridHeader>
                         
                         {loading ? (
                             <LoadingContainer>
                                 Loading artworks...
                             </LoadingContainer>
+                        ) : activeTab === 'myartworks' ? (
+                            // My Artworks 탭: 서브 탭에 따라 필터링
+                            (() => {
+                                let filteredArtworks = artworks.filter(a => !a.is_purchased); // 구매한 것 제외
+                                
+                                // 서브 탭에 따라 추가 필터링
+                                if (activeSubTab === 'pending') {
+                                    filteredArtworks = filteredArtworks.filter(a => a.status === 'pending');
+                                } else if (activeSubTab === 'approved') {
+                                    filteredArtworks = filteredArtworks.filter(a => a.status === 'approved');
+                                } else if (activeSubTab === 'minted') {
+                                    filteredArtworks = filteredArtworks.filter(a => a.status === 'minted');
+                                } else {
+                                    // 서브 탭이 선택되지 않았으면 모든 상태 표시
+                                    filteredArtworks = filteredArtworks.filter(a => ['pending', 'approved', 'minted'].includes(a.status));
+                                }
+                                
+                                return filteredArtworks.length === 0 ? (
+                                    <EmptyContainer>
+                                        <EmptyTitle>No artworks found</EmptyTitle>
+                                        <EmptyText>
+                                            {activeSubTab ? `No ${activeSubTab} artworks found.` : "You haven't created any artworks yet."}
+                                        </EmptyText>
+                                    </EmptyContainer>
+                                ) : (
+                                    <GridContainer>
+                                        {filteredArtworks.map((artwork) => (
+                                        <ArtworkCard 
+                                            key={artwork.id}
+                                            onClick={() => {
+                                                navigate(`/artwork/${artwork.id}`, { state: { backgroundLocation: location } });
+                                            }}
+                                        >
+                                            <MintedBadge>NFT</MintedBadge>
+                                            <ArtworkImage 
+                                                src={artwork.image_ipfs_uri} 
+                                                alt={artwork.title}
+                                                onError={(e) => {
+                                                    e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2IiBmb250LXNpemU9IjE0Ij5JbWFnZSBub3QgZm91bmQ8L3VleHQ+Cjwvc3ZnPgo=';
+                                                }}
+                                            />
+                                            <ArtworkOverlay>
+                                                <ArtworkOverlayTitle>{artwork.title}</ArtworkOverlayTitle>
+                                                <ArtworkOverlayDescription>
+                                                    {artwork.description || 'No description'}
+                                                </ArtworkOverlayDescription>
+                                            </ArtworkOverlay>
+                                            <ArtworkInfo>
+                                                <NFTInfo>
+                                                    <NFTId>#{artwork.token_id || 'N/A'}</NFTId>
+                                                </NFTInfo>
+                                                <NFTPrice>Token ID: {artwork.token_id}</NFTPrice>
+                                            </ArtworkInfo>
+                                        </ArtworkCard>
+                                    ))}
+                                </GridContainer>
+                            );
+                            })()
+                        ) : activeTab === 'mynfts' ? (
+                            // My NFTs 탭: 서브 탭에 따라 필터링
+                            (() => {
+                                let filteredNFTs = mintedNFTs;
+                                
+                                // 서브 탭에 따라 추가 필터링
+                                if (activeSubTab === 'created') {
+                                    filteredNFTs = mintedNFTs.filter(nft => !nft.is_purchased);
+                                } else if (activeSubTab === 'purchased') {
+                                    filteredNFTs = mintedNFTs.filter(nft => nft.is_purchased);
+                                }
+                                // 서브 탭이 선택되지 않았으면 모든 NFT 표시
+                                
+                                return filteredNFTs.length === 0 ? (
+                                    <EmptyContainer>
+                                        <EmptyTitle>No NFTs found</EmptyTitle>
+                                        <EmptyText>
+                                            {activeSubTab ? `No ${activeSubTab} NFTs found.` : "You don't have any NFTs yet."}
+                                        </EmptyText>
+                                    </EmptyContainer>
+                                ) : (
+                                    <GridContainer>
+                                        {filteredNFTs.map((nft) => (
+                                        <ArtworkCard 
+                                            key={nft.id}
+                                            onClick={() => {
+                                                navigate(`/artwork/${nft.id}`, { state: { backgroundLocation: location } });
+                                            }}
+                                        >
+                                            <MintedBadge>NFT</MintedBadge>
+                                            <ArtworkImage 
+                                                src={nft.image_url || nft.image_ipfs_uri} 
+                                                alt={nft.title}
+                                                onError={(e) => {
+                                                    e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMDAiIHZpZXdCb3g9IjAgMCAyMDAgMjAwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzMzMyIvPgo8dGV4dCB4PSIxMDAiIHk9IjEwMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzY2NiIgZm9udC1zaXplPSIxNCI+SW1hZ2Ugbm90IGZvdW5kPC90ZXh0Pgo8L3N2Zz4K';
+                                                }}
+                                            />
+                                            <ArtworkOverlay>
+                                                <ArtworkOverlayTitle>{nft.title}</ArtworkOverlayTitle>
+                                                <ArtworkOverlayDescription>
+                                                    {nft.description || 'No description'}
+                                                </ArtworkOverlayDescription>
+                                            </ArtworkOverlay>
+                                            <ArtworkInfo>
+                                                <NFTInfo>
+                                                    <NFTId>#{nft.token_id || 'N/A'}</NFTId>
+                                                </NFTInfo>
+                                                <NFTPrice>Token ID: {nft.token_id}</NFTPrice>
+                                                {nft.is_purchased && (
+                                                    <LastSale>Purchased NFT</LastSale>
+                                                )}
+                                            </ArtworkInfo>
+                                        </ArtworkCard>
+                                    ))}
+                                </GridContainer>
+                            );
+                            })()
                         ) : filteredArtworks.length === 0 ? (
                             <EmptyContainer>
                                 <EmptyTitle>No artworks found</EmptyTitle>

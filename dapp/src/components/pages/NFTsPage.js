@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { MainTemplate } from '../templates';
 import { getMintedNFTs } from '../../api/user';
+import { getAllListings, buyNFT } from '../../api/marketplace';
 
 // 헤더 컴포넌트
 const Header = styled.div`
@@ -256,6 +257,29 @@ const NFTPrice = styled.div`
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 `;
 
+const BuyButton = styled.button`
+  background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  width: 100%;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
 
 
 const LoadingContainer = styled.div`
@@ -323,33 +347,65 @@ const NFTsPage = () => {
     navigate(`/artwork/${nftId}`);
   };
 
+  // NFT 구매 처리
+  const handleBuyNFT = async (nft) => {
+    try {
+      console.log('NFT 구매 시작:', nft);
+      
+      // 비밀번호 입력 받기 (Google 사용자용)
+      const password = prompt('NFT를 구매하려면 비밀번호를 입력하세요:');
+      if (!password) {
+        alert('비밀번호를 입력해주세요.');
+        return;
+      }
+      
+      // 구매 API 호출
+      const response = await buyNFT(nft.tokenId, password);
+      
+      if (response.success) {
+        alert(`NFT #${nft.tokenId} 구매가 완료되었습니다!`);
+        // 페이지 새로고침
+        window.location.reload();
+      } else {
+        alert(`구매 실패: ${response.error}`);
+      }
+    } catch (error) {
+      console.error('NFT 구매 중 오류:', error);
+      alert('구매 중 오류가 발생했습니다.');
+    }
+  };
+
   // 실제 데이터 가져오기
   useEffect(() => {
     const fetchNFTs = async () => {
       try {
         setLoading(true);
-        const response = await getMintedNFTs();
-        console.log('Minted NFTs Response:', response);
         
-        if (response.success && response.minted_nfts && response.minted_nfts.length > 0) {
-          const nftData = response.minted_nfts.map(nft => ({
-            id: nft.id,
-            title: nft.title || `NFT #${nft.id}`,
-            price: nft.price ? `${nft.price} ETH` : '0.1 ETH',
-            image: nft.image_url || '🎨',
-            creator: nft.creator,
-            tokenId: nft.token_id,
-            contractAddress: nft.contract_address
+        // Marketplace에서 리스팅된 NFT들 가져오기
+        const listingsResponse = await getAllListings();
+        console.log('Marketplace Listings Response:', listingsResponse);
+        
+        if (listingsResponse.success && listingsResponse.listings && listingsResponse.listings.length > 0) {
+          const nftData = listingsResponse.listings.map(listing => ({
+            id: listing.tokenId,
+            title: `NFT #${listing.tokenId}`,
+            price: `${listing.priceFormatted} AXC`,
+            priceUnits: listing.price,
+            image: '🎨', // 기본 이미지
+            creator: listing.seller,
+            tokenId: listing.tokenId,
+            seller: listing.seller,
+            isListed: true
           }));
           setNfts(nftData);
           setFilteredNFTs(nftData);
         } else {
-          console.log('No minted NFTs found');
+          console.log('No active listings found');
           setNfts([]);
           setFilteredNFTs([]);
         }
       } catch (error) {
-        console.error('Failed to fetch NFTs:', error);
+        console.error('Failed to fetch listings:', error);
         setNfts([]);
         setFilteredNFTs([]);
       } finally {
@@ -381,13 +437,13 @@ const NFTsPage = () => {
     // 정렬
     switch (sortBy) {
       case 'price-low':
-        filtered.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+        filtered.sort((a, b) => parseFloat(a.priceUnits) - parseFloat(b.priceUnits));
         break;
       case 'price-high':
-        filtered.sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
+        filtered.sort((a, b) => parseFloat(b.priceUnits) - parseFloat(a.priceUnits));
         break;
       case 'popular':
-        filtered.sort((a, b) => b.likes - a.likes);
+        // 인기도는 아직 구현되지 않음
         break;
       default:
         // 최신순 (기본값)
@@ -492,17 +548,23 @@ const NFTsPage = () => {
             ) : (
               <GridContainer>
                 {filteredNFTs.map(nft => (
-                                  <NFTCard key={nft.id} onClick={() => handleNFTClick(nft.id)}>
-                  <NFTImage imageUrl={nft.image.startsWith('http') ? nft.image : null}>
-                    {!nft.image.startsWith('http') && nft.image}
-                  </NFTImage>
-                  <NFTInfo>
-                    <NFTTitle>{nft.title}</NFTTitle>
-                    <NFTMetaRow>
-                      <NFTToken>#{nft.tokenId ?? 'N/A'}</NFTToken>
-                      <NFTPrice>{nft.price}</NFTPrice>
-                    </NFTMetaRow>
-                  </NFTInfo>
+                  <NFTCard key={nft.id}>
+                    <NFTImage imageUrl={nft.image.startsWith('http') ? nft.image : null}>
+                      {!nft.image.startsWith('http') && nft.image}
+                    </NFTImage>
+                    <NFTInfo>
+                      <NFTTitle>{nft.title}</NFTTitle>
+                      <NFTMetaRow>
+                        <NFTToken>#{nft.tokenId ?? 'N/A'}</NFTToken>
+                        <NFTPrice>{nft.price}</NFTPrice>
+                      </NFTMetaRow>
+                      <BuyButton onClick={(e) => {
+                        e.stopPropagation();
+                        handleBuyNFT(nft);
+                      }}>
+                        Buy Now
+                      </BuyButton>
+                    </NFTInfo>
                   </NFTCard>
                 ))}
               </GridContainer>
