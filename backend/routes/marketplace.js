@@ -220,6 +220,19 @@ router.get('/listing/:tokenId', async (req, res) => {
   }
 });
 
+// 토큰ID의 NFT 소유자 조회
+router.get('/nft-owner/:tokenId', async (req, res) => {
+  try {
+    const tokenId = Number(req.params.tokenId);
+    const result = await contractManager.getNFTOwner(tokenId);
+    if (!result.success) return res.status(500).json({ error: result.error });
+    res.json({ success: true, owner: result.owner });
+  } catch (e) {
+    console.error('nft-owner error:', e);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ETH 잔액 조회 (Deprecated: 사용 안 함)
 router.get('/eth-balance', async (req, res) => {
   try {

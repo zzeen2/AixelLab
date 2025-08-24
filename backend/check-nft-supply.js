@@ -1,7 +1,8 @@
 const { ethers } = require('ethers');
 require('dotenv').config();
 
-const ARTWORK_NFT_ADDRESS = '0xc7c57c6baE0B782316bD7478051A01bCf729e83e';
+require('dotenv').config();
+const ARTWORK_NFT_ADDRESS = process.env.ARTWORK_NFT_ADDRESS;
 const RPC_URL = process.env.RPC_URL || 'https://sepolia.infura.io/v3/your_infura_api_key_here';
 
 // ArtworkNFT ABI (필요한 함수만)

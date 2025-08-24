@@ -22,6 +22,11 @@ export const getListing = async (tokenId) => {
   return res.data;
 };
 
+export const getNFTOwner = async (tokenId) => {
+  const res = await axios.get(`${API_BASE}/marketplace/nft-owner/${tokenId}`, { withCredentials: true });
+  return res.data;
+};
+
 export const listNFT = async (tokenId, price, password) => {
   const res = await axios.post(`${API_BASE}/marketplace/list`, { tokenId, price, password }, { withCredentials: true });
   return res.data;

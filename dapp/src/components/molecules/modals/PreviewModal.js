@@ -204,51 +204,13 @@ const GhostBtn = styled.button`
   }
 `;
 
-const FreeForSubscribersSection = styled.div`
-  margin-top: 20px;
-  padding: 16px;
-  background: rgba(139, 92, 246, 0.05);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  border-radius: 8px;
-`;
 
-const FreeForSubscribersLabel = styled.label`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  color: #8b5cf6;
-  cursor: pointer;
-  margin-bottom: 8px;
-  
-  span {
-    font-size: 14px;
-  }
-`;
-
-const Checkbox = styled.input`
-  width: 16px;
-  height: 16px;
-  accent-color: #8b5cf6;
-  cursor: pointer;
-`;
-
-const FreeForSubscribersHint = styled.div`
-  font-size: 12px;
-  color: rgba(139, 92, 246, 0.8);
-  line-height: 1.5;
-  
-  strong {
-    color: #8b5cf6;
-  }
-`;
 
 const PreviewModal = ({ isOpen, imageUrl, onClose }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
-  const [isFreeForSubscribers, setIsFreeForSubscribers] = useState(false);
   const navigate = useNavigate();
 
   if (!isOpen) return null;
@@ -259,7 +221,7 @@ const PreviewModal = ({ isOpen, imageUrl, onClose }) => {
       const isValidPrice = (val) => /^([0-9]+)(\.[0-9]{1,6})?$/.test(val) && parseFloat(val) > 0;
       if (price && !isValidPrice(price)) return;
       setIsUploading(true);
-      await uploadToIPFS(imageUrl, title, description, price || null, isFreeForSubscribers);
+      await uploadToIPFS(imageUrl, title, description, price || null);
       onClose();
       navigate("/");
     } finally {
@@ -301,22 +263,6 @@ const PreviewModal = ({ isOpen, imageUrl, onClose }) => {
               onChange={(e) => setPrice(e.target.value)}
             />
             <Hint>(Optional) Used as a reference for voting. Up to 6 decimals.</Hint>
-
-            <FreeForSubscribersSection>
-              <FreeForSubscribersLabel>
-                <Checkbox
-                  type="checkbox"
-                  checked={isFreeForSubscribers}
-                  onChange={(e) => setIsFreeForSubscribers(e.target.checked)}
-                />
-                <span>구독 기업들이 리워드 없이 사용 가능한 음원</span>
-              </FreeForSubscribersLabel>
-              <FreeForSubscribersHint>
-                이 음원은 구독한 기업들이 추가 혜택으로 무료 사용할 수 있습니다.
-                <br />
-                <strong>구독은 필요하지만, 아티스트에게 추가 수익은 발생하지 않습니다.</strong>
-              </FreeForSubscribersHint>
-            </FreeForSubscribersSection>
           </FormSection>
         </Main>
         <Footer>

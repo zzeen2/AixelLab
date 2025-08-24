@@ -758,10 +758,7 @@ const NFTDetailPage = ({ isModal }) => {
                     setListingInfo(l.success ? l.listing : null);
                 } catch {}
                 alert('판매 등록 완료! Profile 페이지의 On Sale 탭에서 확인하세요.');
-                // Profile 페이지로 이동하고 새로고침
-                navigate('/profile', { replace: true });
-                // 페이지 새로고침으로 데이터 갱신
-                window.location.reload();
+                navigate('/profile?tab=onSale&refresh=true', { replace: true });
             } else {
                 setListing({ busy: false, msg: res.error || 'List failed' });
                 alert('등록 실패: ' + (res.error || 'List failed'));

@@ -2,7 +2,8 @@ const { ethers } = require('ethers');
 require('dotenv').config();
 
 const RPC_URL = process.env.RPC_URL;
-const ARTWORK_NFT_ADDRESS = '0xc7c57c6baE0B782316bD7478051A01bCf729e83e';
+require('dotenv').config();
+const ARTWORK_NFT_ADDRESS = process.env.ARTWORK_NFT_ADDRESS;
 
 // 분석할 트랜잭션 해시들
 const transactions = [

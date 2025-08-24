@@ -6,6 +6,7 @@ contract SmartAccount {
     address public entryPoint;
     
     event Executed(address indexed target, uint value, bytes data);
+    event ExecutionFailed(address indexed target, uint value, bytes data, string reason);
 
     // 스마트 계정 생성자
     constructor(address _owner, address _entryPoint) {
@@ -27,8 +28,18 @@ contract SmartAccount {
 
     // nft 민팅
     function execute(address to, uint value, bytes calldata data) external onlyEntryPoint {
-        (bool success,) = to.call{value: value}(data);
-        require(success, "Execution failed");
+        (bool success, bytes memory returnData) = to.call{value: value}(data);
+        if (!success) {
+            // Return the revert reason if available
+            if (returnData.length > 0) {
+                assembly {
+                    let returnDataSize := mload(returnData)
+                    revert(add(32, returnData), returnDataSize)
+                }
+            } else {
+                revert("Execution failed");
+            }
+        }
         emit Executed(to, value, data);
     }
 
@@ -37,8 +48,18 @@ contract SmartAccount {
         require(targets.length == values.length && values.length == datas.length, "Array length mismatch");
         
         for (uint i = 0; i < targets.length; i++) {
-            (bool success,) = targets[i].call{value: values[i]}(datas[i]);
-            require(success, "Batch execution failed");
+            (bool success, bytes memory returnData) = targets[i].call{value: values[i]}(datas[i]);
+            if (!success) {
+                string memory reason = "Unknown error";
+                if (returnData.length > 0) {
+                    assembly {
+                        let returnDataSize := mload(returnData)
+                        reason := add(32, returnData)
+                    }
+                }
+                emit ExecutionFailed(targets[i], values[i], datas[i], reason);
+                revert(string(abi.encodePacked("Batch execution failed at index ", i, ": ", reason)));
+            }
             emit Executed(targets[i], values[i], datas[i]);
         }
     }

@@ -6,9 +6,9 @@ import UserAvatar from '../atoms/ui/UserAvatar';
 import { getUserArtworks, getUserStats, getMintedNFTs } from '../../api/user';
 import { getWalletStatus, createWallet } from '../../api/auth';
 import { getPendingMints, executeMinting } from '../../api/voting';
-import { getSmartAccount, getSmartAccountPredict, getAxcBalance, getListing } from '../../api/marketplace';
+import { getSmartAccount, getSmartAccountPredict, getAxcBalance, getListing, getNFTOwner } from '../../api/marketplace';
 
-// 헤더 컴포넌트
+
 const Header = styled.div`
   padding: 0;
   background: linear-gradient(135deg, #0d1017 0%, #1a1a1a 100%);
@@ -32,7 +32,6 @@ const HeaderSubtitle = styled.p`
   line-height: 1.5;
 `;
 
-// 프로필 정보 섹션
 const ProfileSection = styled.div`
   padding: 24px 32px;
   background: rgba(255, 255, 255, 0.02);
@@ -619,6 +618,25 @@ const ProfilePage = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [activeTab, setActiveTab] = useState('all');
+    
+    // URL 파라미터에서 탭 정보 읽기
+    useEffect(() => {
+        const urlParams = new URLSearchParams(location.search);
+        const tabParam = urlParams.get('tab');
+        const refreshParam = urlParams.get('refresh');
+        
+        if (tabParam && ['all', 'pending', 'mynfts', 'onSale', 'rejected'].includes(tabParam)) {
+            setActiveTab(tabParam);
+        }
+        
+        // refresh 파라미터가 있으면 listing 정보 새로고침
+        if (refreshParam === 'true') {
+            // URL에서 refresh 파라미터 제거
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.delete('refresh');
+            window.history.replaceState({}, '', newUrl);
+        }
+    }, [location.search]);
     const [userInfo, setUserInfo] = useState(null);
     const [artworks, setArtworks] = useState([]);
     const [listingByToken, setListingByToken] = useState({});
@@ -659,7 +677,20 @@ const ProfilePage = () => {
             case 'mynfts':
                 return artworks.filter(a => a.status === 'minted' && (!!a.owner_address ? a.owner_address?.toLowerCase() === userInfo?.wallet_address?.toLowerCase() : true));
             case 'onSale':
-                const onSaleArtworks = artworks.filter(a => a.status === 'minted' && a.token_id != null && listingByToken[a.token_id]?.active);
+                const onSaleArtworks = artworks.filter(a => {
+                    const isMinted = a.status === 'minted';
+                    const hasTokenId = a.token_id != null && typeof a.token_id === 'number';
+                    const hasActiveListing = listingByToken[a.token_id]?.active;
+                    
+                    console.log(`ProfilePage - Artwork ${a.id} (token ${a.token_id}):`, {
+                        isMinted,
+                        hasTokenId,
+                        hasActiveListing,
+                        listingInfo: listingByToken[a.token_id]
+                    });
+                    
+                    return isMinted && hasTokenId && hasActiveListing;
+                });
                 console.log('ProfilePage - onSaleArtworks:', onSaleArtworks);
                 return onSaleArtworks;
             case 'rejected':
@@ -674,7 +705,7 @@ const ProfilePage = () => {
         all: artworks.length,
         pending: artworks.filter(a => a.status === 'pending' || a.status === 'approved').length,
         mynfts: artworks.filter(a => a.status === 'minted' && (!!a.owner_address ? a.owner_address?.toLowerCase() === userInfo?.wallet_address?.toLowerCase() : true)).length,
-        onSale: artworks.filter(a => a.status === 'minted' && a.token_id != null && listingByToken[a.token_id]?.active).length,
+        onSale: artworks.filter(a => a.status === 'minted' && a.token_id != null && typeof a.token_id === 'number' && listingByToken[a.token_id]?.active).length,
         rejected: artworks.filter(a => a.status === 'failed').length
     };
 
@@ -695,7 +726,7 @@ const ProfilePage = () => {
 
     // 민팅된 tokenId의 리스팅 정보 수집 (On Sale 탭 사용)
     useEffect(() => {
-        const mintedWithToken = artworks.filter(a => a.status === 'minted' && a.token_id != null);
+        const mintedWithToken = artworks.filter(a => a.status === 'minted' && a.token_id != null && typeof a.token_id === 'number');
         console.log('ProfilePage - mintedWithToken:', mintedWithToken);
         if (!mintedWithToken.length) {
             setListingByToken({});
@@ -704,22 +735,128 @@ const ProfilePage = () => {
         let cancelled = false;
         (async () => {
             try {
-                const results = await Promise.allSettled(mintedWithToken.map(a => getListing(a.token_id)));
-                if (cancelled) return;
+                // 요청을 순차적으로 처리하여 RPC 부하 감소
                 const map = {};
-                results.forEach((r, idx) => {
-                    const tk = mintedWithToken[idx].token_id;
-                    console.log(`ProfilePage - getListing for token ${tk}:`, r);
-                    if (r.status === 'fulfilled' && r.value?.success) map[tk] = r.value.listing;
-                });
-                console.log('ProfilePage - listingByToken map:', map);
-                setListingByToken(map);
-            } catch {
+                
+                for (let i = 0; i < mintedWithToken.length; i++) {
+                    if (cancelled) return;
+                    
+                    const tk = mintedWithToken[i].token_id;
+                    
+                    try {
+                        // 각 요청 사이에 1초 지연 (RPC 제한 회피)
+                        if (i > 0) await new Promise(resolve => setTimeout(resolve, 1000));
+                        
+                        // listing 정보만 조회 (RPC 부하 감소)
+                        let listingResult = null;
+                        
+                        // listing 정보 조회 (최대 3회 재시도)
+                        for (let retry = 0; retry < 3; retry++) {
+                            try {
+                                listingResult = await getListing(tk);
+                                break;
+                            } catch (error) {
+                                if (retry < 2) {
+                                    console.log(`ProfilePage - Retrying listing for token ${tk}, attempt ${retry + 1}`);
+                                    await new Promise(resolve => setTimeout(resolve, 2000 * (retry + 1)));
+                                } else {
+                                    console.error(`ProfilePage - Failed to get listing for token ${tk} after 3 retries:`, error);
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        console.log(`ProfilePage - getListing for token ${tk}:`, listingResult);
+                        
+                        if (listingResult?.success) {
+                            map[tk] = listingResult.listing;
+                            console.log(`ProfilePage - token ${tk} listing active:`, listingResult.listing.active);
+                            console.log(`ProfilePage - token ${tk} listing seller:`, listingResult.listing.seller);
+                            console.log(`ProfilePage - token ${tk} listing price:`, listingResult.listing.price);
+                            
+                            // NFT 소유권 확인
+                            try {
+                                const ownerResult = await getNFTOwner(tk);
+                                if (ownerResult?.success) {
+                                    console.log(`ProfilePage - token ${tk} owner:`, ownerResult.owner);
+                                    console.log(`ProfilePage - token ${tk} Smart Account:`, '0x218d167FA0C1a54136dFCA003aD5B3871EC55427');
+                                    console.log(`ProfilePage - token ${tk} owner matches Smart Account:`, ownerResult.owner.toLowerCase() === '0x218d167FA0C1a54136dFCA003aD5B3871EC55427'.toLowerCase());
+                                }
+                            } catch (ownerError) {
+                                console.error(`ProfilePage - Error getting owner for token ${tk}:`, ownerError);
+                            }
+                        } else {
+                            console.log(`ProfilePage - token ${tk} listing failed:`, listingResult);
+                        }
+                    } catch (error) {
+                        console.error(`ProfilePage - Error fetching data for token ${tk}:`, error);
+                    }
+                }
+                
+                if (!cancelled) {
+                    console.log('ProfilePage - listingByToken map:', map);
+                    setListingByToken(map);
+                }
+            } catch (error) {
+                console.error('ProfilePage - Error in listing fetch:', error);
                 if (!cancelled) setListingByToken({});
             }
         })();
         return () => { cancelled = true; };
     }, [artworks]);
+
+    // refresh 파라미터가 있을 때 listing 정보 새로고침
+    useEffect(() => {
+        const urlParams = new URLSearchParams(location.search);
+        const refreshParam = urlParams.get('refresh');
+        
+        if (refreshParam === 'true' && artworks.length > 0) {
+            // 10초 후 새로고침 (블록체인 반영 시간 고려)
+            setTimeout(() => {
+                const mintedWithToken = artworks.filter(a => a.status === 'minted' && a.token_id != null && typeof a.token_id === 'number');
+                if (mintedWithToken.length > 0) {
+                    (async () => {
+                        try {
+                            const map = {};
+                            for (let i = 0; i < mintedWithToken.length; i++) {
+                                const tk = mintedWithToken[i].token_id;
+                                
+                                // 각 요청 사이에 1초 지연 (RPC 제한 회피)
+                                if (i > 0) await new Promise(resolve => setTimeout(resolve, 1000));
+                                
+                                try {
+                                    // 재시도 로직 추가
+                                    let result = null;
+                                    for (let retry = 0; retry < 3; retry++) {
+                                        try {
+                                            result = await getListing(tk);
+                                            break;
+                                        } catch (error) {
+                                            if (retry < 2) {
+                                                console.log(`Refresh - Retrying listing for token ${tk}, attempt ${retry + 1}`);
+                                                await new Promise(resolve => setTimeout(resolve, 2000 * (retry + 1)));
+                                            } else {
+                                                throw error;
+                                            }
+                                        }
+                                    }
+                                    
+                                    if (result?.success) {
+                                        map[tk] = result.listing;
+                                    }
+                                } catch (error) {
+                                    console.error(`Refresh - Error fetching listing for token ${tk}:`, error);
+                                }
+                            }
+                            setListingByToken(prev => ({ ...prev, ...map }));
+                        } catch (error) {
+                            console.error('Listing 정보 새로고침 실패:', error);
+                        }
+                    })();
+                }
+            }, 3000);
+        }
+    }, [location.search, artworks]);
 
     // 민팅 대기 목록 조회
     const fetchPendingMints = async () => {

@@ -3,12 +3,34 @@ const ethers = require('ethers');
 const path = require('path');
 const fs = require('fs');
 
+// 환경 변수에서 컨트랙트 주소들 가져오기
 const ENTRYPOINT_ADDRESS = process.env.ENTRYPOINT_ADDRESS;
 const PAYMASTER_ADDRESS = process.env.PAYMASTER_ADDRESS;
 const SMART_ACCOUNT_FACTORY_ADDRESS = process.env.SMART_ACCOUNT_FACTORY_ADDRESS;
 const ARTWORK_NFT_ADDRESS = process.env.ARTWORK_NFT_ADDRESS;
 const AXC_ADDRESS = process.env.AXC_ADDRESS;
 const MARKETPLACE_ADDRESS = process.env.MARKETPLACE_ADDRESS;
+
+// 환경 변수 검증
+if (!ENTRYPOINT_ADDRESS || !PAYMASTER_ADDRESS || !SMART_ACCOUNT_FACTORY_ADDRESS || 
+    !ARTWORK_NFT_ADDRESS || !AXC_ADDRESS || !MARKETPLACE_ADDRESS) {
+    console.error('❌ 필수 환경 변수가 설정되지 않았습니다!');
+    console.error('ENTRYPOINT_ADDRESS:', ENTRYPOINT_ADDRESS);
+    console.error('PAYMASTER_ADDRESS:', PAYMASTER_ADDRESS);
+    console.error('SMART_ACCOUNT_FACTORY_ADDRESS:', SMART_ACCOUNT_FACTORY_ADDRESS);
+    console.error('ARTWORK_NFT_ADDRESS:', ARTWORK_NFT_ADDRESS);
+    console.error('AXC_ADDRESS:', AXC_ADDRESS);
+    console.error('MARKETPLACE_ADDRESS:', MARKETPLACE_ADDRESS);
+    process.exit(1);
+}
+
+console.log('✅ 모든 컨트랙트 주소가 환경 변수에서 로드되었습니다:');
+console.log('ENTRYPOINT_ADDRESS:', ENTRYPOINT_ADDRESS);
+console.log('PAYMASTER_ADDRESS:', PAYMASTER_ADDRESS);
+console.log('SMART_ACCOUNT_FACTORY_ADDRESS:', SMART_ACCOUNT_FACTORY_ADDRESS);
+console.log('ARTWORK_NFT_ADDRESS:', ARTWORK_NFT_ADDRESS);
+console.log('AXC_ADDRESS:', AXC_ADDRESS);
+console.log('MARKETPLACE_ADDRESS:', MARKETPLACE_ADDRESS);
 
 let provider, serverWallet, artworkNFT, smartAccountFactory, global, axcToken, marketplace;
 
@@ -288,10 +310,10 @@ const getNonce = async (accountAddress) => {
     return await entryPoint.getNonce(accountAddress);
 };
 
-const encodeMintCallData = async (artistAddress, proposalId, tokenURI, voteCount) => {
-    // 1) ArtworkNFT 민팅 데이터 생성
+const encodeMintCallData = async (smartAccountAddress, proposalId, tokenURI, voteCount) => {
+    // 1) ArtworkNFT 민팅 데이터 생성 (Smart Account 주소로 민팅)
     const populatedTx = await artworkNFT.mintApprovedArtwork.populateTransaction(
-        artistAddress,
+        smartAccountAddress, // artistAddress 대신 smartAccountAddress 사용
         proposalId,
         tokenURI,
         voteCount
@@ -328,17 +350,7 @@ const encodeExecuteBatch = (targets, values, datas) => {
     return smartAccountInterface.encodeFunctionData('executeBatch', [targets, values, datas]);
 };
 
-const encodeListBatchCallData = async (tokenId, priceUnits) => {
-    if (!marketplace || !axcToken) throw new Error('Marketplace or AXC not initialized');
-    // approval for NFT operator + list
-    const nftApproveData = await artworkNFT.setApprovalForAll.populateTransaction(MARKETPLACE_ADDRESS, true);
-    const listData = await marketplace.list.populateTransaction(tokenId, priceUnits);
-    return encodeExecuteBatch(
-        [ARTWORK_NFT_ADDRESS, MARKETPLACE_ADDRESS],
-        [0, 0],
-        [nftApproveData.data, listData.data]
-    );
-};
+
 
 const encodeCancelCallData = async (tokenId) => {
     if (!marketplace) throw new Error('Marketplace not initialized');
@@ -548,7 +560,7 @@ const mintApprovedArtwork = async (artistAddress, proposalId, tokenURI, voteCoun
         
         // 4. CallData 인코딩
         console.log('4. CallData 인코딩 중...');
-        const callData = await encodeMintCallData(artistAddress, proposalId, tokenURI, voteCount);
+        const callData = await encodeMintCallData(smartAccountAddress, proposalId, tokenURI, voteCount);
         console.log('CallData:', callData);
         
         // 5. Paymaster 데이터 인코딩
@@ -641,6 +653,18 @@ const mintApprovedArtwork = async (artistAddress, proposalId, tokenURI, voteCoun
                         const totalSupply = await artworkNFT.getTotalSupply();
                         tokenId = Number(totalSupply) - 1; // 0-based index
                         console.log('getTotalSupply로 계산된 Token ID:', tokenId);
+                        
+                        // NFT 소유권 확인
+                        if (tokenId !== null) {
+                            try {
+                                const owner = await artworkNFT.ownerOf(tokenId);
+                                console.log(`Token ${tokenId} 소유자:`, owner);
+                                console.log('Smart Account 주소:', smartAccountAddress);
+                                console.log('소유자 일치:', owner.toLowerCase() === smartAccountAddress.toLowerCase());
+                            } catch (ownerError) {
+                                console.log('소유권 확인 실패:', ownerError.message);
+                            }
+                        }
                     } catch (supplyError) {
                         console.log('getTotalSupply 확인 실패:', supplyError.message);
                     }
@@ -717,18 +741,185 @@ const sendUserOpFromSmartAccount = async (smartAccountAddress, callData, transac
     const signature = await signUserOperation(userOp, transactionWallet, smartAccountAddress, userType);
     userOp.signature = signature;
     // Send
-    const tx = await entryPoint.handleOps([userOp]);
-    const receipt = await tx.wait();
-    return { success: true, transactionHash: receipt.hash };
+    console.log('=== UserOp 전송 시작 ===');
+    console.log('Smart Account:', smartAccountAddress);
+    console.log('Call Data:', callData);
+    
+    // Call Data 디코딩하여 어떤 함수가 호출되는지 확인
+    try {
+        const smartAccountInterface = new ethers.Interface(global.SMART_ACCOUNT_ABI);
+        const decoded = smartAccountInterface.parseTransaction({ data: callData });
+        console.log('디코딩된 함수:', decoded.name);
+        console.log('디코딩된 인자:', decoded.args);
+    } catch (error) {
+        console.log('Call Data 디코딩 실패:', error.message);
+    }
+    
+    try {
+        const tx = await entryPoint.handleOps([userOp]);
+        console.log('UserOp 전송 성공, 트랜잭션 해시:', tx.hash);
+        console.log('트랜잭션 완료 대기 중...');
+        
+        const receipt = await tx.wait();
+        console.log('=== 트랜잭션 완료 ===');
+        console.log('트랜잭션 해시:', receipt.hash);
+        console.log('Gas 사용량:', receipt.gasUsed.toString());
+        console.log('상태:', receipt.status === 1 ? '성공' : '실패');
+        console.log('로그 개수:', receipt.logs.length);
+        
+        // 모든 이벤트 로그 파싱
+        console.log('=== 이벤트 로그 상세 분석 ===');
+        for (let i = 0; i < receipt.logs.length; i++) {
+            const log = receipt.logs[i];
+            console.log(`로그 ${i}:`, {
+                address: log.address,
+                topics: log.topics,
+                data: log.data
+            });
+            
+            // SmartAccount 이벤트 파싱
+            try {
+                const smartAccountInterface = new ethers.Interface([
+                    'event Executed(address indexed target, uint value, bytes data)',
+                    'event ExecutionFailed(address indexed target, uint value, bytes data, string reason)'
+                ]);
+                const parsed = smartAccountInterface.parseLog(log);
+                console.log(`SmartAccount 이벤트:`, parsed.name, parsed.args);
+            } catch (e) {
+                // 파싱 실패는 정상 (다른 컨트랙트의 이벤트일 수 있음)
+            }
+            
+            // Marketplace 이벤트 파싱
+            try {
+                const marketplaceInterface = new ethers.Interface([
+                    'event Listed(uint256 indexed tokenId, address indexed seller, uint256 price)',
+                    'event ListAttempt(uint256 indexed tokenId, address indexed caller, uint256 price, address owner, bool approved)'
+                ]);
+                const parsed = marketplaceInterface.parseLog(log);
+                console.log(`Marketplace 이벤트:`, parsed.name, parsed.args);
+            } catch (e) {
+                // 파싱 실패는 정상 (다른 컨트랙트의 이벤트일 수 있음)
+            }
+        }
+        
+        if (receipt.status === 0) {
+            console.error('트랜잭션 실패!');
+            return { success: false, error: 'Transaction failed' };
+        }
+        
+        // listing 트랜잭션 결과 확인 (tokenId는 별도로 확인 필요)
+        console.log('=== Listing 트랜잭션 결과 확인 ===');
+        console.log('트랜잭션 성공, listing 결과는 별도 API에서 확인 필요');
+        
+        return { success: true, transactionHash: receipt.hash };
+    } catch (error) {
+        console.error('UserOp 전송 실패:', error);
+        return { success: false, error: error.message };
+    }
 };
 
 const listOnMarketplace = async (userAddress, tokenId, price, transactionWallet = null, userType = 'google') => {
+    console.log('=== Listing 시작 ===');
+    console.log('userAddress:', userAddress);
+    console.log('tokenId:', tokenId);
+    console.log('price:', price);
+    
     // create/get smart account
     const acc = await createGoogleUserAccount(userAddress);
     if (!acc.success) return acc;
     const sa = acc.accountAddress;
+    console.log('Smart Account:', sa);
+    
+    // NFT 소유권 미리 확인
+    try {
+        const owner = await artworkNFT.ownerOf(tokenId);
+        console.log('NFT 소유자:', owner);
+        console.log('Smart Account와 일치:', owner.toLowerCase() === sa.toLowerCase());
+        
+        if (owner.toLowerCase() !== sa.toLowerCase()) {
+            return { success: false, error: 'NFT is not owned by Smart Account' };
+        }
+    } catch (error) {
+        console.error('NFT 소유권 확인 실패:', error);
+        return { success: false, error: 'Failed to verify NFT ownership' };
+    }
+    
     const priceUnits = ethers.parseUnits(String(price), 6);
-    const callData = await encodeListBatchCallData(tokenId, priceUnits);
+    
+    // 현재 승인 상태 확인
+    const isApproved = await artworkNFT.isApprovedForAll(sa, MARKETPLACE_ADDRESS);
+    console.log(`=== 승인 상태 확인 ===`);
+    console.log(`Smart Account: ${sa}`);
+    console.log(`Marketplace: ${MARKETPLACE_ADDRESS}`);
+    console.log(`현재 승인 상태: ${isApproved}`);
+    
+    let callData;
+    
+    if (isApproved) {
+        console.log(`이미 승인되어 있음 - list만 실행`);
+        // 이미 승인되어 있으면 list만 실행
+        const listData = await marketplace.list.populateTransaction(tokenId, priceUnits);
+        callData = encodeExecute(MARKETPLACE_ADDRESS, 0, listData.data);
+    } else {
+        console.log(`승인 필요 - setApprovalForAll + list 실행`);
+        
+        // 먼저 setApprovalForAll만 단독으로 실행해보기
+        console.log(`=== setApprovalForAll 단독 실행 테스트 ===`);
+        const approveData = await artworkNFT.setApprovalForAll.populateTransaction(MARKETPLACE_ADDRESS, true);
+        console.log(`setApprovalForAll call data:`, approveData.data);
+        
+        const approveCallData = encodeExecute(ARTWORK_NFT_ADDRESS, 0, approveData.data);
+        console.log(`setApprovalForAll encodeExecute 결과:`, approveCallData);
+        
+        // setApprovalForAll만 먼저 실행
+        console.log(`setApprovalForAll UserOp 전송 시작...`);
+        const approveResult = await sendUserOpFromSmartAccount(sa, approveCallData, transactionWallet, userType);
+        console.log(`setApprovalForAll 실행 결과:`, approveResult);
+        
+        if (!approveResult.success) {
+            console.log(`setApprovalForAll 실패:`, approveResult.error);
+            return approveResult;
+        }
+        
+        // 승인 상태 다시 확인
+        const newApprovalStatus = await artworkNFT.isApprovedForAll(sa, MARKETPLACE_ADDRESS);
+        console.log(`승인 후 상태: ${newApprovalStatus}`);
+        
+        if (!newApprovalStatus) {
+            console.log(`setApprovalForAll이 성공했지만 승인 상태가 여전히 false입니다!`);
+            return { success: false, error: 'Approval failed despite successful transaction' };
+        }
+        
+        // 승인 후 list 실행
+        console.log(`=== list 실행 ===`);
+        
+        // 모든 조건 완전 검증
+        const currentOwner = await artworkNFT.ownerOf(tokenId);
+        const finalApprovalStatus = await artworkNFT.isApprovedForAll(sa, MARKETPLACE_ADDRESS);
+        
+        console.log(`=== list 실행 전 완전 검증 ===`);
+        console.log(`tokenId: ${tokenId}`);
+        console.log(`price: ${priceUnits.toString()}`);
+        console.log(`NFT 소유자: ${currentOwner}`);
+        console.log(`Smart Account: ${sa}`);
+        console.log(`소유자 일치: ${currentOwner.toLowerCase() === sa.toLowerCase()}`);
+        console.log(`승인 상태: ${finalApprovalStatus}`);
+        console.log(`Marketplace 주소: ${MARKETPLACE_ADDRESS}`);
+        console.log(`ArtworkNFT 주소: ${ARTWORK_NFT_ADDRESS}`);
+        
+        if (currentOwner.toLowerCase() !== sa.toLowerCase()) {
+            return { success: false, error: `NFT owner mismatch: ${currentOwner} vs ${sa}` };
+        }
+        
+        if (!finalApprovalStatus) {
+            return { success: false, error: 'NFT not approved for marketplace' };
+        }
+        
+        const listData = await marketplace.list.populateTransaction(tokenId, priceUnits);
+        console.log(`list call data: ${listData.data}`);
+        callData = encodeExecute(MARKETPLACE_ADDRESS, 0, listData.data);
+    }
+    
     return await sendUserOpFromSmartAccount(sa, callData, transactionWallet, userType);
 };
 
@@ -810,8 +1001,24 @@ const getAxcBalance = async (address) => {
 
 const getListing = async (tokenId) => {
     if (!marketplace) return { success: false, error: 'Marketplace not initialized' };
-    const l = await marketplace.listings(tokenId);
-    return { success: true, listing: { seller: l.seller, price: l.price.toString(), active: l.active } };
+    try {
+        const l = await marketplace.listings(tokenId);
+        return { success: true, listing: { seller: l.seller, price: l.price.toString(), active: l.active } };
+    } catch (e) {
+        console.error(`getListing error for token ${tokenId}:`, e);
+        return { success: false, error: e.message };
+    }
+};
+
+const getNFTOwner = async (tokenId) => {
+    if (!artworkNFT) return { success: false, error: 'ArtworkNFT not initialized' };
+    try {
+        const owner = await artworkNFT.ownerOf(tokenId);
+        return { success: true, owner };
+    } catch (e) {
+        console.error(`getNFTOwner error for token ${tokenId}:`, e);
+        return { success: false, error: e.message };
+    }
 };
 
 const getEthBalance = async (address) => {
@@ -835,5 +1042,6 @@ module.exports = {
     getPredictedSmartAccount,
     getAxcBalance,
     getListing,
+    getNFTOwner,
     getEthBalance
 };

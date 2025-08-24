@@ -23,6 +23,7 @@ contract Marketplace is Ownable {
     event Listed(uint256 indexed tokenId, address indexed seller, uint256 price);
     event Canceled(uint256 indexed tokenId, address indexed seller);
     event Bought(uint256 indexed tokenId, address indexed buyer, address indexed seller, uint256 price, uint256 fee);
+    event ListAttempt(uint256 indexed tokenId, address indexed caller, uint256 price, address owner, bool approved);
 
     constructor(address _nft, address _payment, address _feeRecipient) Ownable(msg.sender) {
         nft = IERC721(_nft);
@@ -41,9 +42,14 @@ contract Marketplace is Ownable {
     }
 
     function list(uint256 tokenId, uint256 price) external {
+        address owner = nft.ownerOf(tokenId);
+        bool approved = nft.isApprovedForAll(msg.sender, address(this));
+        
+        emit ListAttempt(tokenId, msg.sender, price, owner, approved);
+        
         require(price > 0, "price=0");
-        require(nft.ownerOf(tokenId) == msg.sender, "not owner");
-        require(nft.isApprovedForAll(msg.sender, address(this)), "not approved");
+        require(owner == msg.sender, "not owner");
+        require(approved, "not approved");
         listings[tokenId] = Listing({ seller: msg.sender, price: price, active: true });
         emit Listed(tokenId, msg.sender, price);
     }
