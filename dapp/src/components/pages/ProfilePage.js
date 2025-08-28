@@ -716,7 +716,7 @@ const ProfilePage = () => {
     // 탭 카운트 미리 계산
     const tabCounts = {
         all: artworks.length,
-        myartworks: artworks.filter(a => a.status === 'minted' && !a.is_purchased).length, // 생성한 작품만
+                    myartworks: artworks.filter(a => ['pending', 'approved'].includes(a.status) && !a.is_purchased).length, // pending과 approved 작품만
         mynfts: mintedNFTs.length, // 소유한 모든 NFT (생성한 것 + 구매한 것)
         onSale: artworks.filter(a => a.status === 'minted' && a.token_id != null && typeof a.token_id === 'number' && listingByToken[a.token_id]?.active).length,
         rejected: artworks.filter(a => a.status === 'failed').length
@@ -1286,12 +1286,7 @@ const ProfilePage = () => {
                                     >
                                         ✅ Approved ({artworks.filter(a => a.status === 'approved').length})
                                     </SubTabButton>
-                                    <SubTabButton
-                                        active={activeSubTab === 'minted'}
-                                        onClick={() => setActiveSubTab('minted')}
-                                    >
-                                        🪙 Minted ({artworks.filter(a => a.status === 'minted' && !a.is_purchased).length})
-                                    </SubTabButton>
+                                    
                                 </>
                             )}
                             {activeTab === 'mynfts' && (
@@ -1327,20 +1322,18 @@ const ProfilePage = () => {
                                 Loading artworks...
                             </LoadingContainer>
                         ) : activeTab === 'myartworks' ? (
-                            // My Artworks 탭: 서브 탭에 따라 필터링
+                            // My Artworks 탭: 서브 탭에 따라 필터링 (민팅된 것 제외)
                             (() => {
-                                let filteredArtworks = artworks.filter(a => !a.is_purchased); // 구매한 것 제외
+                                let filteredArtworks = artworks.filter(a => !a.is_purchased && a.status !== 'minted'); // 구매한 것과 민팅된 것 제외
                                 
                                 // 서브 탭에 따라 추가 필터링
                                 if (activeSubTab === 'pending') {
                                     filteredArtworks = filteredArtworks.filter(a => a.status === 'pending');
                                 } else if (activeSubTab === 'approved') {
                                     filteredArtworks = filteredArtworks.filter(a => a.status === 'approved');
-                                } else if (activeSubTab === 'minted') {
-                                    filteredArtworks = filteredArtworks.filter(a => a.status === 'minted');
                                 } else {
-                                    // 서브 탭이 선택되지 않았으면 모든 상태 표시
-                                    filteredArtworks = filteredArtworks.filter(a => ['pending', 'approved', 'minted'].includes(a.status));
+                                    // 서브 탭이 선택되지 않았으면 pending과 approved만 표시
+                                    filteredArtworks = filteredArtworks.filter(a => ['pending', 'approved'].includes(a.status));
                                 }
                                 
                                 return filteredArtworks.length === 0 ? (
